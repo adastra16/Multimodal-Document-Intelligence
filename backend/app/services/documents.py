@@ -9,7 +9,8 @@ from uuid import uuid4
 from fastapi import UploadFile
 
 from app.core.config import Settings
-from app.core.errors import BadRequestError, UnsupportedMediaTypeError
+from app.core.errors import BadRequestError, DependencyUnavailableError, UnsupportedMediaTypeError
+from app.ingestion.pdf_parser import PdfDocumentParser
 from app.models.document import DocumentRecord, DocumentStatus
 from app.persistence.documents import DocumentRepository
 
@@ -18,6 +19,7 @@ class DocumentService:
     def __init__(self, settings: Settings, repository: DocumentRepository | None = None) -> None:
         self._settings = settings
         self._repository = repository or DocumentRepository(settings)
+        self._parser = PdfDocumentParser()
 
     def list_documents(self) -> list[DocumentRecord]:
         return self._repository.list_documents()
@@ -55,12 +57,26 @@ class DocumentService:
             content_type=file.content_type or "application/pdf",
             size_bytes=len(file_bytes),
             storage_path=str(storage_path),
-            status=DocumentStatus.UPLOADED,
+            status=DocumentStatus.PROCESSING,
             page_count=None,
             created_at=now,
             updated_at=now,
         )
-        return self._repository.insert(document)
+        self._repository.insert(document)
+
+        try:
+            parsed_document = self._parser.parse(document)
+        except (BadRequestError, DependencyUnavailableError):
+            self._repository.update_status(document_id, DocumentStatus.FAILED)
+            raise
+
+        self._repository.save_artifact(parsed_document)
+        self._repository.update_status(
+            document_id,
+            DocumentStatus.READY,
+            page_count=parsed_document.page_count,
+        )
+        return self._repository.get_document(document_id)
 
     @staticmethod
     def _is_pdf(filename: str, content_type: str | None) -> bool:

@@ -19,6 +19,8 @@ class DocumentRepository:
         self._settings.data_dir.mkdir(parents=True, exist_ok=True)
         self._uploads_dir = self._settings.data_dir / "uploads"
         self._uploads_dir.mkdir(parents=True, exist_ok=True)
+        self._artifacts_dir = self._settings.data_dir / "artifacts"
+        self._artifacts_dir.mkdir(parents=True, exist_ok=True)
         self._initialize_schema()
 
     @staticmethod
@@ -113,7 +115,8 @@ class DocumentRepository:
             ).fetchone()
         if row is None:
             raise NotFoundError(f"Document {document_id} not found")
-        return self._deserialize_row(row)
+        artifact = self._load_artifact(document_id)
+        return artifact or self._deserialize_row(row)
 
     def update_status(
         self,
@@ -135,6 +138,26 @@ class DocumentRepository:
                 raise NotFoundError(f"Document {document_id} not found")
         return self.get_document(document_id)
 
+    def save_artifact(self, document: DocumentRecord) -> DocumentRecord:
+        self._artifact_path(document.document_id).write_text(
+            document.model_dump_json(indent=2, exclude_none=True),
+            encoding="utf-8",
+        )
+        return document
+
     @property
     def uploads_dir(self) -> Path:
         return self._uploads_dir
+
+    @property
+    def artifacts_dir(self) -> Path:
+        return self._artifacts_dir
+
+    def _artifact_path(self, document_id: str) -> Path:
+        return self._artifacts_dir / f"{document_id}.json"
+
+    def _load_artifact(self, document_id: str) -> DocumentRecord | None:
+        artifact_path = self._artifact_path(document_id)
+        if not artifact_path.exists():
+            return None
+        return DocumentRecord.model_validate_json(artifact_path.read_text(encoding="utf-8"))

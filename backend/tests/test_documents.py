@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import fitz
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
@@ -18,11 +19,24 @@ def _build_client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(settings))
 
 
+def _create_pdf(path: Path) -> None:
+    document = fitz.open()
+    page_one = document.new_page(width=595, height=842)
+    page_one.insert_text((72, 72), "Alpha section\nShared conclusion", fontsize=12)
+    page_two = document.new_page(width=595, height=842)
+    page_two.insert_text((72, 72), "Beta section\nCross-page evidence", fontsize=12)
+    document.save(path)
+    document.close()
+
+
 def test_upload_list_and_get_document(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "sample.pdf"
+    _create_pdf(pdf_path)
+
     with _build_client(tmp_path) as client:
         response = client.post(
             "/documents",
-            files=[("files", ("sample.pdf", b"%PDF-1.4 sample", "application/pdf"))],
+            files=[("files", ("sample.pdf", pdf_path.read_bytes(), "application/pdf"))],
         )
 
         assert response.status_code == 200
@@ -30,17 +44,23 @@ def test_upload_list_and_get_document(tmp_path: Path) -> None:
         assert len(uploaded) == 1
         document_id = uploaded[0]["document_id"]
         assert uploaded[0]["filename"] == "sample.pdf"
-        assert uploaded[0]["status"] == "uploaded"
+        assert uploaded[0]["status"] == "ready"
+        assert uploaded[0]["page_count"] == 2
 
         list_response = client.get("/documents")
         assert list_response.status_code == 200
         listed = list_response.json()["documents"]
         assert len(listed) == 1
         assert listed[0]["document_id"] == document_id
+        assert listed[0]["status"] == "ready"
 
         detail_response = client.get(f"/documents/{document_id}")
         assert detail_response.status_code == 200
-        assert detail_response.json()["document_id"] == document_id
+        detail = detail_response.json()
+        assert detail["document_id"] == document_id
+        assert detail["page_count"] == 2
+        assert detail["pages"][0]["page_number"] == 1
+        assert detail["pages"][0]["blocks"][0]["block_type"] == "text"
 
 
 def test_rejects_non_pdf_upload(tmp_path: Path) -> None:

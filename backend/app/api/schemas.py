@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.document import DocumentStatus
+from app.models.document import DocumentChunk, DocumentPage, DocumentStatus
 
 
 class HealthResponse(BaseModel):
@@ -30,3 +30,8 @@ class DocumentListResponse(BaseModel):
 
 class DocumentUploadResponse(BaseModel):
     documents: list[DocumentSummaryResponse]
+
+
+class DocumentDetailResponse(DocumentSummaryResponse):
+    pages: list[DocumentPage]
+    chunks: list[DocumentChunk]

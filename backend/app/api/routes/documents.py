@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.api.deps import get_app_settings
 from app.api.schemas import (
+    DocumentDetailResponse,
     DocumentListResponse,
     DocumentSummaryResponse,
     DocumentUploadResponse,
@@ -49,9 +50,14 @@ def list_documents(
     return DocumentListResponse(documents=[_to_summary(document) for document in documents])
 
 
-@router.get("/{document_id}", response_model=DocumentSummaryResponse)
+@router.get("/{document_id}", response_model=DocumentDetailResponse)
 def get_document(
     document_id: str,
     service: DocumentService = Depends(_get_document_service),
-) -> DocumentSummaryResponse:
-    return _to_summary(service.get_document(document_id))
+) -> DocumentDetailResponse:
+    document = service.get_document(document_id)
+    return DocumentDetailResponse(
+        **_to_summary(document).model_dump(),
+        pages=document.pages,
+        chunks=document.chunks,
+    )
