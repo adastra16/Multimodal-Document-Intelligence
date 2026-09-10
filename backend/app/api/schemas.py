@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.models.document import ChunkType, DocumentChunk, DocumentPage, DocumentStatus
+from app.models.generation import AnswerClaim, AnswerStatus
 
 
 class HealthResponse(BaseModel):
@@ -74,3 +75,18 @@ class RetrievalQueryResponse(BaseModel):
     result_count: int
     results: list[RetrievalHitResponse]
     evidence_groups: list[RetrievalEvidenceGroupResponse]
+
+
+class AnswerQueryRequest(BaseModel):
+    question: str = Field(min_length=1)
+    document_id: str | None = None
+    retrieval_limit: int = Field(default=5, ge=1, le=20)
+
+
+class AnswerResponse(BaseModel):
+    question: str
+    status: AnswerStatus
+    answer: str
+    claims: list[AnswerClaim]
+    evidence_group_ids: list[str]
+    generation_mode: str

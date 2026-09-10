@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     retrieval_candidate_multiplier: int = 4
     retrieval_rerank_seed_limit: int = 3
     retrieval_expansion_per_seed: int = 3
+    generation_min_evidence_score: float = 0.15
 
     ocr_command: str = "tesseract"
     ocr_language: str = "eng"
