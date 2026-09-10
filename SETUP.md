@@ -1,4 +1,4 @@
-# Setup (Phase 1)
+# Setup
 
 Requires Python 3.10 or newer.
 
@@ -18,6 +18,14 @@ ruff check backend
 mypy
 ```
 
-`make install-dev`, `make test`, `make lint`, and `make typecheck` wrap the same commands if `make` is available.
+Start the API:
+
+```bash
+python -m uvicorn app.main:app --reload --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+Then open `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`.
+
+`make install-dev`, `make test`, `make lint`, `make typecheck`, and `make run` wrap the same commands if `make` is available.
 
 Do not commit `.env`. Runtime data belongs under `data/` and is gitignored.

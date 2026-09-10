@@ -1,0 +1,9 @@
+"""Typed HTTP request/response contracts for the API layer."""
+
+from pydantic import BaseModel, Field
+
+
+class HealthResponse(BaseModel):
+    status: str = Field(examples=["ok"])
+    version: str
+    env: str
