@@ -32,6 +32,16 @@ class ConflictError(AppError):
         super().__init__(code="conflict", message=message, status_code=409)
 
 
+class BadRequestError(AppError):
+    def __init__(self, message: str = "Bad request") -> None:
+        super().__init__(code="bad_request", message=message, status_code=400)
+
+
+class UnsupportedMediaTypeError(AppError):
+    def __init__(self, message: str = "Unsupported media type") -> None:
+        super().__init__(code="unsupported_media_type", message=message, status_code=415)
+
+
 class DependencyUnavailableError(AppError):
     """Used later for graceful degradation when OCR/LLM/index is down."""
 

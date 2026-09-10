@@ -1,0 +1,88 @@
+"""Canonical document domain models."""
+
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class BlockType(str, Enum):
+    TEXT = "text"
+    TITLE = "title"
+    TABLE = "table"
+    FIGURE = "figure"
+    CAPTION = "caption"
+    LIST_ITEM = "list_item"
+    HEADER = "header"
+    FOOTER = "footer"
+    OTHER = "other"
+
+
+class ChunkType(str, Enum):
+    PAGE = "page"
+    SECTION = "section"
+    WINDOW = "window"
+    TABLE = "table"
+    FIGURE = "figure"
+    CROSS_PAGE = "cross_page"
+
+
+class DocumentStatus(str, Enum):
+    UPLOADED = "uploaded"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
+class BoundingBox(BaseModel):
+    x0: float = Field(ge=0)
+    y0: float = Field(ge=0)
+    x1: float = Field(ge=0)
+    y1: float = Field(ge=0)
+
+
+class DocumentBlock(BaseModel):
+    block_id: str
+    page_number: int = Field(ge=1)
+    block_type: BlockType
+    text: str | None = None
+    bbox: BoundingBox | None = None
+    reading_order: int | None = None
+    section_title: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentPage(BaseModel):
+    page_number: int = Field(ge=1)
+    width: float | None = None
+    height: float | None = None
+    blocks: list[DocumentBlock] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentChunk(BaseModel):
+    chunk_id: str
+    document_id: str
+    chunk_type: ChunkType
+    text: str
+    page_numbers: list[int] = Field(default_factory=list)
+    parent_chunk_id: str | None = None
+    child_chunk_ids: list[str] = Field(default_factory=list)
+    source_block_ids: list[str] = Field(default_factory=list)
+    bbox: BoundingBox | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentRecord(BaseModel):
+    document_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    storage_path: str
+    status: DocumentStatus
+    page_count: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    pages: list[DocumentPage] = Field(default_factory=list)
+    chunks: list[DocumentChunk] = Field(default_factory=list)

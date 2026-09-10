@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./data/app.db"
     data_dir: Path = Path("./data")
+    max_upload_mb: int = 50
 
     llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = ""
@@ -38,6 +39,10 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_env.lower() in {"development", "dev", "local"}
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
 
 
 @lru_cache

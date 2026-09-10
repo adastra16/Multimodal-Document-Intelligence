@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or get_settings()
     configure_logging(resolved)
+    resolved.data_dir.mkdir(parents=True, exist_ok=True)
 
     app = FastAPI(
         title="Multimodal Document Intelligence",
