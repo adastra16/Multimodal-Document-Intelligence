@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.document import DocumentChunk, DocumentPage, DocumentStatus
+from app.models.document import ChunkType, DocumentChunk, DocumentPage, DocumentStatus
 
 
 class HealthResponse(BaseModel):
@@ -35,3 +35,29 @@ class DocumentUploadResponse(BaseModel):
 class DocumentDetailResponse(DocumentSummaryResponse):
     pages: list[DocumentPage]
     chunks: list[DocumentChunk]
+
+
+class RetrievalQueryRequest(BaseModel):
+    query: str = Field(min_length=1)
+    limit: int = Field(default=5, ge=1, le=20)
+    document_id: str | None = None
+
+
+class RetrievalHitResponse(BaseModel):
+    chunk_id: str
+    document_id: str
+    chunk_type: ChunkType
+    text: str
+    page_numbers: list[int]
+    source_block_ids: list[str]
+    lexical_score: float
+    semantic_score: float
+    hybrid_score: float
+    matched_terms: list[str]
+    metadata: dict[str, object]
+
+
+class RetrievalQueryResponse(BaseModel):
+    query: str
+    result_count: int
+    results: list[RetrievalHitResponse]

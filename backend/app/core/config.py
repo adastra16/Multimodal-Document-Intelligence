@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     max_upload_mb: int = 50
     embedding_dimensions: int = 256
+    retrieval_semantic_weight: float = 0.65
+    retrieval_lexical_weight: float = 0.35
 
     ocr_command: str = "tesseract"
     ocr_language: str = "eng"
