@@ -53,3 +53,8 @@ def test_retrieval_endpoint_returns_ranked_matches(tmp_path: Path) -> None:
     assert top_result["document_id"] == document_id
     assert top_result["hybrid_score"] >= top_result["lexical_score"] * 0.25
     assert top_result["page_numbers"]
+    assert top_result["retrieval_stage"] == "reranked"
+    assert body["evidence_groups"]
+    evidence_group = body["evidence_groups"][0]
+    assert evidence_group["anchor_chunk_id"] == top_result["chunk_id"]
+    assert evidence_group["hits"][0]["metadata"]["evidence_role"] == "anchor"

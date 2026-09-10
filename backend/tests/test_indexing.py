@@ -48,9 +48,14 @@ def test_uploaded_document_populates_vector_index(tmp_path: Path) -> None:
     )
     repository = VectorIndexRepository(settings)
     assert repository.get_chunk_count() >= 3
+    indexed_chunks = repository.list_chunks()
+    bridge_chunk = next(
+        chunk for chunk in indexed_chunks if chunk["chunk_type"].value == "cross_page"
+    )
+    assert bridge_chunk["parent_chunk_id"] is not None
 
     query_results = repository.search(
-        repository.list_chunks()[0]["embedding"],
+        indexed_chunks[0]["embedding"],
         limit=1,
     )
     assert query_results

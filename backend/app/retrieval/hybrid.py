@@ -76,6 +76,7 @@ class HybridRetriever:
                     metadata={
                         "chunk_type": chunk_type.value,
                         "embedding_dim": embedding_dim,
+                        "parent_chunk_id": candidate.get("parent_chunk_id"),
                     },
                 )
             )

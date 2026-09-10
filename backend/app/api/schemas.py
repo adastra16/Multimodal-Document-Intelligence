@@ -55,9 +55,22 @@ class RetrievalHitResponse(BaseModel):
     hybrid_score: float
     matched_terms: list[str]
     metadata: dict[str, object]
+    rerank_score: float
+    final_score: float
+    retrieval_stage: str
+    expanded_from_chunk_id: str | None
+
+
+class RetrievalEvidenceGroupResponse(BaseModel):
+    group_id: str
+    document_id: str
+    anchor_chunk_id: str
+    page_numbers: list[int]
+    hits: list[RetrievalHitResponse]
 
 
 class RetrievalQueryResponse(BaseModel):
     query: str
     result_count: int
     results: list[RetrievalHitResponse]
+    evidence_groups: list[RetrievalEvidenceGroupResponse]

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_app_settings
 from app.api.schemas import (
+    RetrievalEvidenceGroupResponse,
     RetrievalHitResponse,
     RetrievalQueryRequest,
     RetrievalQueryResponse,
@@ -23,13 +24,20 @@ def search(
     request: RetrievalQueryRequest,
     service: RetrievalService = Depends(_get_retrieval_service),
 ) -> RetrievalQueryResponse:
-    results = service.search(
+    retrieval_result = service.search(
         query=request.query,
         limit=request.limit,
         document_id=request.document_id,
     )
     return RetrievalQueryResponse(
         query=request.query,
-        result_count=len(results),
-        results=[RetrievalHitResponse.model_validate(hit.model_dump()) for hit in results],
+        result_count=len(retrieval_result.results),
+        results=[
+            RetrievalHitResponse.model_validate(hit.model_dump())
+            for hit in retrieval_result.results
+        ],
+        evidence_groups=[
+            RetrievalEvidenceGroupResponse.model_validate(group.model_dump())
+            for group in retrieval_result.evidence_groups
+        ],
     )
