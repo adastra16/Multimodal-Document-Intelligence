@@ -13,13 +13,12 @@ except ImportError:  # pragma: no cover - exercised when the dependency is missi
     fitz = None
 
 from app.core.errors import BadRequestError, DependencyUnavailableError
+from app.ingestion.chunking import StructureAwareChunker
 from app.ingestion.ocr import OcrEngine, TesseractOcrEngine
 from app.models.document import (
     BlockType,
     BoundingBox,
-    ChunkType,
     DocumentBlock,
-    DocumentChunk,
     DocumentPage,
     DocumentRecord,
     DocumentRegion,
@@ -31,6 +30,7 @@ from app.models.document import (
 class PdfDocumentParser:
     def __init__(self, ocr_engine: OcrEngine | None = None) -> None:
         self._ocr_engine = ocr_engine or TesseractOcrEngine()
+        self._chunker = StructureAwareChunker()
 
     def parse(self, document: DocumentRecord) -> DocumentRecord:
         if fitz is None:
@@ -46,7 +46,6 @@ class PdfDocumentParser:
             raise BadRequestError(f"Unable to parse PDF {document.filename}") from exc
 
         pages: list[DocumentPage] = []
-        chunks: list[DocumentChunk] = []
         try:
             for page_index in range(pdf.page_count):
                 page = pdf.load_page(page_index)
@@ -63,23 +62,6 @@ class PdfDocumentParser:
                     text_blocks = [
                         block for block in block_payloads if block.block_type == BlockType.TEXT
                     ]
-                page_text = "\n".join(
-                    block.text for block in text_blocks if block.text and block.text.strip()
-                ).strip()
-                chunks.append(
-                    DocumentChunk(
-                        chunk_id=f"{document.document_id}-page-{page_number}",
-                        document_id=document.document_id,
-                        chunk_type=ChunkType.PAGE,
-                        text=page_text,
-                        page_numbers=[page_number],
-                        source_block_ids=[block.block_id for block in block_payloads],
-                        metadata={
-                            "extraction_backend": "pymupdf",
-                            "is_scanned_page": not bool(text_blocks),
-                        },
-                    )
-                )
                 pages.append(
                     DocumentPage(
                         page_number=page_number,
@@ -99,6 +81,8 @@ class PdfDocumentParser:
             pdf.close()
 
         now = datetime.now(timezone.utc)
+        structured_document = document.model_copy(update={"pages": pages})
+        chunks = self._chunker.build(structured_document)
         return document.model_copy(
             update={
                 "status": DocumentStatus.READY,

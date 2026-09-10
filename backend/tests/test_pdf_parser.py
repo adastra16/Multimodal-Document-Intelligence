@@ -43,4 +43,5 @@ def test_pdf_parser_extracts_pages_blocks_and_chunks(tmp_path: Path) -> None:
     assert len(parsed.pages) == 2
     assert parsed.pages[0].page_number == 1
     assert parsed.pages[0].blocks[0].block_type.value == "text"
-    assert parsed.chunks[0].chunk_type.value == "page"
+    assert any(chunk.chunk_type.value == "page" for chunk in parsed.chunks)
+    assert any(chunk.chunk_type.value == "cross_page" for chunk in parsed.chunks)
