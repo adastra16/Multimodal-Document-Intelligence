@@ -45,3 +45,7 @@ def test_answer_endpoint_returns_cited_extractive_evidence(tmp_path: Path) -> No
     assert body["claims"]
     assert body["claims"][0]["citations"][0]["document_id"] == document_id
     assert body["claims"][0]["citations"][0]["page_numbers"] == [1]
+    citation = body["claims"][0]["citations"][0]
+    assert citation["filename"] == "answer.pdf"
+    assert citation["regions"][0]["page_number"] == 1
+    assert citation["regions"][0]["bbox"] is not None

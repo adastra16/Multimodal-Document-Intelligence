@@ -6,6 +6,7 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.generation.grounded import GroundedAnswerGenerator
 from app.models.generation import GroundedAnswer
+from app.services.citations import CitationService
 from app.services.retrieval import RetrievalService
 
 logger = get_logger(__name__)
@@ -16,9 +17,11 @@ class AnswerService:
         self,
         settings: Settings,
         retrieval_service: RetrievalService | None = None,
+        citation_service: CitationService | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service or RetrievalService(settings)
         self._generator = GroundedAnswerGenerator(settings.generation_min_evidence_score)
+        self._citation_service = citation_service or CitationService(settings)
 
     def answer(
         self,
@@ -32,11 +35,12 @@ class AnswerService:
             document_id=document_id,
         )
         answer = self._generator.generate(question, retrieval_result.evidence_groups)
+        hydrated_answer = self._citation_service.hydrate(answer)
         logger.info(
             "grounded_answer_generated",
             document_id=document_id,
-            status=answer.status.value,
-            claim_count=len(answer.claims),
-            evidence_group_count=len(answer.evidence_group_ids),
+            status=hydrated_answer.status.value,
+            claim_count=len(hydrated_answer.claims),
+            evidence_group_count=len(hydrated_answer.evidence_group_ids),
         )
-        return answer
+        return hydrated_answer

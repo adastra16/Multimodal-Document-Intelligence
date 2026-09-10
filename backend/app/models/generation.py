@@ -6,6 +6,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.models.document import BlockType, BoundingBox
+
 
 class AnswerStatus(str, Enum):
     ANSWERED = "answered"
@@ -15,8 +17,19 @@ class AnswerStatus(str, Enum):
 class Citation(BaseModel):
     document_id: str
     chunk_id: str
+    filename: str | None = None
     page_numbers: list[int] = Field(default_factory=list)
     source_block_ids: list[str] = Field(default_factory=list)
+    regions: list[CitationRegion] = Field(default_factory=list)
+
+
+class CitationRegion(BaseModel):
+    """The source block a PDF viewer should highlight for a citation."""
+
+    block_id: str
+    page_number: int
+    block_type: BlockType
+    bbox: BoundingBox | None = None
 
 
 class AnswerClaim(BaseModel):
