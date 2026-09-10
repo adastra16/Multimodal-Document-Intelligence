@@ -9,16 +9,29 @@ from uuid import uuid4
 from fastapi import UploadFile
 
 from app.core.config import Settings
-from app.core.errors import BadRequestError, DependencyUnavailableError, UnsupportedMediaTypeError
+from app.core.errors import (
+    BadRequestError,
+    DependencyUnavailableError,
+    IndexingError,
+    UnsupportedMediaTypeError,
+)
 from app.ingestion.pdf_parser import PdfDocumentParser
 from app.models.document import DocumentRecord, DocumentStatus
 from app.persistence.documents import DocumentRepository
+from app.persistence.vector_index import VectorIndexRepository
+from app.retrieval.embeddings import HashedEmbeddingModel
+from app.retrieval.indexing import DocumentIndexer
 
 
 class DocumentService:
     def __init__(self, settings: Settings, repository: DocumentRepository | None = None) -> None:
         self._settings = settings
         self._repository = repository or DocumentRepository(settings)
+        self._vector_index = VectorIndexRepository(settings)
+        self._indexer = DocumentIndexer(
+            self._vector_index,
+            HashedEmbeddingModel(self._settings.embedding_dimensions),
+        )
         self._parser = PdfDocumentParser()
 
     def list_documents(self) -> list[DocumentRecord]:
@@ -71,6 +84,12 @@ class DocumentService:
             raise
 
         self._repository.save_artifact(parsed_document)
+        try:
+            self._indexer.index(parsed_document)
+        except Exception as exc:  # pragma: no cover - defensive failure path
+            self._repository.update_status(document_id, DocumentStatus.FAILED)
+            raise IndexingError("Unable to index parsed chunks") from exc
+
         self._repository.update_status(
             document_id,
             DocumentStatus.READY,

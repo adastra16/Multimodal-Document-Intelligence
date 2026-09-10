@@ -49,6 +49,11 @@ class DependencyUnavailableError(AppError):
         super().__init__(code="dependency_unavailable", message=message, status_code=503)
 
 
+class IndexingError(AppError):
+    def __init__(self, message: str = "Indexing failed") -> None:
+        super().__init__(code="indexing_failed", message=message, status_code=503)
+
+
 class ErrorBody(BaseModel):
     code: str
     message: str

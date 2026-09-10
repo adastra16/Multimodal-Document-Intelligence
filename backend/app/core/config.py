@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/app.db"
     data_dir: Path = Path("./data")
     max_upload_mb: int = 50
+    embedding_dimensions: int = 256
 
     ocr_command: str = "tesseract"
     ocr_language: str = "eng"
