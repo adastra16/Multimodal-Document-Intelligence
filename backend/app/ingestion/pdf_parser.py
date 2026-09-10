@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ except ImportError:  # pragma: no cover - exercised when the dependency is missi
     fitz = None
 
 from app.core.errors import BadRequestError, DependencyUnavailableError
+from app.ingestion.ocr import OcrEngine, TesseractOcrEngine
 from app.models.document import (
     BlockType,
     BoundingBox,
@@ -20,11 +22,16 @@ from app.models.document import (
     DocumentChunk,
     DocumentPage,
     DocumentRecord,
+    DocumentRegion,
     DocumentStatus,
+    RegionType,
 )
 
 
 class PdfDocumentParser:
+    def __init__(self, ocr_engine: OcrEngine | None = None) -> None:
+        self._ocr_engine = ocr_engine or TesseractOcrEngine()
+
     def parse(self, document: DocumentRecord) -> DocumentRecord:
         if fitz is None:
             raise DependencyUnavailableError("PDF parsing dependency is unavailable")
@@ -45,9 +52,17 @@ class PdfDocumentParser:
                 page = pdf.load_page(page_index)
                 page_number = page_index + 1
                 block_payloads = self._extract_blocks(document.document_id, page_number, page)
+                regions = self._blocks_to_regions(block_payloads)
                 text_blocks = [
                     block for block in block_payloads if block.block_type == BlockType.TEXT
                 ]
+                is_scanned_page = not bool(text_blocks)
+                if is_scanned_page:
+                    regions.extend(self._ocr_page(document.document_id, page_number, page))
+                    block_payloads.extend(self._regions_to_blocks(regions[len(block_payloads):]))
+                    text_blocks = [
+                        block for block in block_payloads if block.block_type == BlockType.TEXT
+                    ]
                 page_text = "\n".join(
                     block.text for block in text_blocks if block.text and block.text.strip()
                 ).strip()
@@ -71,10 +86,12 @@ class PdfDocumentParser:
                         width=float(page.rect.width),
                         height=float(page.rect.height),
                         blocks=block_payloads,
+                        regions=regions,
                         metadata={
                             "extraction_backend": "pymupdf",
-                            "is_scanned_page": not bool(text_blocks),
+                            "is_scanned_page": is_scanned_page,
                             "block_count": len(block_payloads),
+                            "region_count": len(regions),
                         },
                     )
                 )
@@ -123,6 +140,17 @@ class PdfDocumentParser:
             )
         return blocks
 
+    def _ocr_page(self, document_id: str, page_number: int, page: Any) -> list[DocumentRegion]:
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+            temp_path = Path(temp_file.name)
+        try:
+            pixmap.save(temp_path)
+            return self._ocr_engine.extract(temp_path, page_number, document_id)
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
     @staticmethod
     def _map_block_type(raw_type: int | None) -> BlockType:
         if raw_type == 0:
@@ -151,3 +179,61 @@ class PdfDocumentParser:
             x1=float(value[2]),
             y1=float(value[3]),
         )
+
+    @staticmethod
+    def _blocks_to_regions(blocks: list[DocumentBlock]) -> list[DocumentRegion]:
+        regions: list[DocumentRegion] = []
+        for block in blocks:
+            regions.append(
+                DocumentRegion(
+                    region_id=block.block_id,
+                    page_number=block.page_number,
+                    region_type=PdfDocumentParser._block_to_region_type(block.block_type),
+                    text=block.text,
+                    bbox=block.bbox,
+                    source="native",
+                    metadata=block.metadata,
+                )
+            )
+        return regions
+
+    @staticmethod
+    def _regions_to_blocks(regions: list[DocumentRegion]) -> list[DocumentBlock]:
+        blocks: list[DocumentBlock] = []
+        for region in regions:
+            blocks.append(
+                DocumentBlock(
+                    block_id=region.region_id,
+                    page_number=region.page_number,
+                    block_type=PdfDocumentParser._region_to_block_type(region.region_type),
+                    text=region.text,
+                    bbox=region.bbox,
+                    reading_order=None,
+                    metadata={**region.metadata, "source": region.source},
+                )
+            )
+        return blocks
+
+    @staticmethod
+    def _block_to_region_type(block_type: BlockType) -> RegionType:
+        if block_type == BlockType.TEXT:
+            return RegionType.TEXT
+        if block_type == BlockType.FIGURE:
+            return RegionType.FIGURE
+        if block_type == BlockType.TABLE:
+            return RegionType.TABLE
+        if block_type == BlockType.CAPTION:
+            return RegionType.CAPTION
+        return RegionType.OTHER
+
+    @staticmethod
+    def _region_to_block_type(region_type: RegionType) -> BlockType:
+        if region_type in {RegionType.TEXT, RegionType.OCR_LINE, RegionType.OCR_WORD}:
+            return BlockType.TEXT
+        if region_type == RegionType.FIGURE:
+            return BlockType.FIGURE
+        if region_type == RegionType.TABLE:
+            return BlockType.TABLE
+        if region_type == RegionType.CAPTION:
+            return BlockType.CAPTION
+        return BlockType.OTHER

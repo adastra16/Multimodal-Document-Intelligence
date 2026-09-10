@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     max_upload_mb: int = 50
 
+    ocr_command: str = "tesseract"
+    ocr_language: str = "eng"
+    ocr_dpi: int = 220
+
     llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = ""
     llm_model: str = "llama3.1"

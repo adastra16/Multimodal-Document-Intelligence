@@ -19,6 +19,16 @@ class BlockType(str, Enum):
     OTHER = "other"
 
 
+class RegionType(str, Enum):
+    TEXT = "text"
+    OCR_LINE = "ocr_line"
+    OCR_WORD = "ocr_word"
+    FIGURE = "figure"
+    TABLE = "table"
+    CAPTION = "caption"
+    OTHER = "other"
+
+
 class ChunkType(str, Enum):
     PAGE = "page"
     SECTION = "section"
@@ -53,11 +63,23 @@ class DocumentBlock(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class DocumentRegion(BaseModel):
+    region_id: str
+    page_number: int = Field(ge=1)
+    region_type: RegionType
+    text: str | None = None
+    bbox: BoundingBox | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    source: str = Field(default="native")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class DocumentPage(BaseModel):
     page_number: int = Field(ge=1)
     width: float | None = None
     height: float | None = None
     blocks: list[DocumentBlock] = Field(default_factory=list)
+    regions: list[DocumentRegion] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
