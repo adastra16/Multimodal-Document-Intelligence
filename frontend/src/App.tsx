@@ -1,7 +1,8 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
-import { askQuestion, listDocuments, sourceFileUrl, uploadDocuments } from "./api";
-import type { AnswerResponse, DocumentSummary } from "./types";
+import { askQuestion, listDocuments, uploadDocuments } from "./api";
+import PdfViewer from "./PdfViewer";
+import type { AnswerResponse, Citation, DocumentSummary } from "./types";
 
 function App() {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
@@ -11,6 +12,8 @@ function App() {
   const [isAnswering, setIsAnswering] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AnswerResponse | null>(null);
+  const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,11 +53,18 @@ function App() {
       await refreshDocuments();
       setSelectedDocument(response.documents[0] ?? null);
       setAnswer(null);
+      setActiveCitation(null);
+      setPageNumber(1);
     } catch (caughtError) {
       setError(messageFor(caughtError));
     } finally {
       setIsUploading(false);
     }
+  }
+
+  function openCitation(citation: Citation) {
+    setActiveCitation(citation);
+    setPageNumber(citation.regions[0]?.page_number ?? citation.page_numbers[0] ?? 1);
   }
 
   async function handleQuestion(event: FormEvent<HTMLFormElement>) {
@@ -93,6 +103,8 @@ function App() {
               onClick={() => {
                 setSelectedDocument(document);
                 setAnswer(null);
+                setActiveCitation(null);
+                setPageNumber(1);
               }}
               type="button"
             >
@@ -113,10 +125,11 @@ function App() {
               <span className={`status ${selectedDocument.status}`}>{selectedDocument.status}</span>
             </header>
             {selectedDocument.status === "ready" ? (
-              <iframe
-                key={selectedDocument.document_id}
-                src={sourceFileUrl(selectedDocument.document_id)}
-                title={`PDF source: ${selectedDocument.filename}`}
+              <PdfViewer
+                documentId={selectedDocument.document_id}
+                highlightedRegions={activeCitation?.regions ?? []}
+                onPageChange={setPageNumber}
+                pageNumber={pageNumber}
               />
             ) : <div className="empty-state">This document is still being processed.</div>}
           </>
@@ -152,9 +165,9 @@ function App() {
               <article className="claim" key={`${claim.text}-${index}`}>
                 <p>{claim.text}</p>
                 {claim.citations.map((citation) => (
-                  <p className="citation" key={citation.chunk_id}>
+                  <button className="citation" key={citation.chunk_id} onClick={() => openCitation(citation)} type="button">
                     {citation.filename ?? citation.document_id}, page {citation.page_numbers.join(", ")}
-                  </p>
+                  </button>
                 ))}
               </article>
             ))}
