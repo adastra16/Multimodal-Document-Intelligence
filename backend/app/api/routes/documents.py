@@ -1,6 +1,7 @@
 """Document upload and lookup endpoints."""
 
 from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import FileResponse
 
 from app.api.deps import get_app_settings
 from app.api.schemas import (
@@ -48,6 +49,20 @@ def list_documents(
 ) -> DocumentListResponse:
     documents = service.list_documents()
     return DocumentListResponse(documents=[_to_summary(document) for document in documents])
+
+
+@router.get("/{document_id}/file", response_class=FileResponse)
+def get_document_file(
+    document_id: str,
+    service: DocumentService = Depends(_get_document_service),
+) -> FileResponse:
+    document = service.get_document(document_id)
+    return FileResponse(
+        path=document.storage_path,
+        media_type=document.content_type,
+        filename=document.filename,
+        content_disposition_type="inline",
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentDetailResponse)

@@ -62,6 +62,11 @@ def test_upload_list_and_get_document(tmp_path: Path) -> None:
         assert detail["pages"][0]["page_number"] == 1
         assert detail["pages"][0]["blocks"][0]["block_type"] == "text"
 
+        file_response = client.get(f"/documents/{document_id}/file")
+        assert file_response.status_code == 200
+        assert file_response.headers["content-type"] == "application/pdf"
+        assert file_response.content.startswith(b"%PDF")
+
 
 def test_rejects_non_pdf_upload(tmp_path: Path) -> None:
     with _build_client(tmp_path) as client:
