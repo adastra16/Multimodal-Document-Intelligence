@@ -1,4 +1,4 @@
-import type { DocumentListResponse, DocumentUploadResponse } from "./types";
+import type { AnswerResponse, DocumentListResponse, DocumentUploadResponse } from "./types";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -25,4 +25,12 @@ export function uploadDocuments(files: File[]): Promise<DocumentUploadResponse> 
 
 export function sourceFileUrl(documentId: string): string {
   return `${apiBaseUrl}/documents/${documentId}/file`;
+}
+
+export function askQuestion(question: string, documentId: string): Promise<AnswerResponse> {
+  return request<AnswerResponse>("/answers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, document_id: documentId }),
+  });
 }
