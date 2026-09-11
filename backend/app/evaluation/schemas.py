@@ -59,6 +59,10 @@ class AnswerEvaluation(BaseModel):
     cited_pages: list[int] = Field(default_factory=list)
     citation_page_recall: float = Field(default=0.0, ge=0.0, le=1.0)
     contains_expected_keywords: bool = False
+    faithfulness_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    hallucination_detected: bool = False
+    failure_type: str | None = None
+    claim_evaluations: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class EvaluationReport(BaseModel):
@@ -73,6 +77,9 @@ class EvaluationReport(BaseModel):
     cross_page_recall: float
     status_accuracy: float
     keyword_containment_rate: float
+    mean_faithfulness: float = 1.0
+    hallucination_rate: float = 0.0
+    failure_breakdown: dict[str, int] = Field(default_factory=dict)
 
 
 class EvaluationRun(BaseModel):

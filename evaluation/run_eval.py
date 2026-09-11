@@ -86,12 +86,15 @@ def run_cli() -> int:
     report = eval_run.report
 
     # Output detailed results table
-    print("\n" + "=" * 100)
+    print("\n" + "=" * 115)
     print(f"SAMPLE-BY-SAMPLE EVALUATION BREAKDOWN: {dataset.name}")
-    print("=" * 100)
-    header = f"{'ID':<10} | {'Type':<22} | {'Hit@1':<5} | {'Hit@3':<5} | {'Hit@5':<5} | {'MRR':<5} | {'PageRec':<7} | {'Status':<6} | {'Keywords':<8}"
+    print("=" * 115)
+    header = (
+        f"{'ID':<10} | {'Type':<22} | {'Hit@1':<5} | {'Hit@3':<5} | "
+        f"{'MRR':<5} | {'PageRec':<7} | {'Faithful':<8} | {'Status':<6} | {'Failure Type':<22}"
+    )
     print(header)
-    print("-" * 100)
+    print("-" * 115)
 
     if hasattr(sys.stdout, "reconfigure"):
         try:
@@ -102,24 +105,23 @@ def run_cli() -> int:
     for r_eval, a_eval in zip(eval_run.retrieval_evaluations, eval_run.answer_evaluations):
         h1 = "YES" if r_eval.hit_at_1 else "NO"
         h3 = "YES" if r_eval.hit_at_3 else "NO"
-        h5 = "YES" if r_eval.hit_at_5 else "NO"
         sm = "YES" if a_eval.status_match else "NO"
-        kw = "YES" if a_eval.contains_expected_keywords else "NO"
+        fail_desc = a_eval.failure_type or "none"
 
         line = (
             f"{r_eval.sample_id:<10} | "
             f"{r_eval.question_type.value:<22} | "
             f"{h1:<5} | "
             f"{h3:<5} | "
-            f"{h5:<5} | "
             f"{r_eval.reciprocal_rank:<5.2f} | "
             f"{r_eval.page_recall:<7.2f} | "
+            f"{a_eval.faithfulness_score:<8.2f} | "
             f"{sm:<6} | "
-            f"{kw:<8}"
+            f"{fail_desc:<22}"
         )
         print(line)
 
-    print("=" * 100)
+    print("=" * 115)
     print("\n" + "=" * 50)
     print("AGGREGATE BENCHMARK PERFORMANCE REPORT")
     print("=" * 50)
@@ -133,6 +135,14 @@ def run_cli() -> int:
     print(f"Cross-Page Recall             : {report.cross_page_recall * 100:.1f}%")
     print(f"Answer Status Accuracy        : {report.status_accuracy * 100:.1f}%")
     print(f"Keyword Groundedness Rate     : {report.keyword_containment_rate * 100:.1f}%")
+    print(f"Mean Faithfulness Score       : {report.mean_faithfulness * 100:.1f}%")
+    print(f"Hallucination Rate            : {report.hallucination_rate * 100:.1f}%")
+    if report.failure_breakdown:
+        print("\nFailure Case Breakdown:")
+        for f_type, count in report.failure_breakdown.items():
+            print(f"  - {f_type:<28}: {count} instance(s)")
+    else:
+        print("\nFailure Case Breakdown: Zero failures detected.")
     print("=" * 50)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)

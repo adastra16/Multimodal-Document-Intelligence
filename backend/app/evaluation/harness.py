@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
+from app.evaluation.judge import FaithfulnessJudge, LlmFaithfulnessJudge
 from app.evaluation.schemas import (
     AnswerEvaluation,
     EvaluationReport,
@@ -26,6 +27,7 @@ class EvaluationHarness:
         document_service: DocumentService | None = None,
         retrieval_service: RetrievalService | None = None,
         answer_service: AnswerService | None = None,
+        judge: FaithfulnessJudge | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._document_service = document_service or DocumentService(self._settings)
@@ -34,6 +36,7 @@ class EvaluationHarness:
             self._settings,
             retrieval_service=self._retrieval_service,
         )
+        self._judge = judge or LlmFaithfulnessJudge(self._settings)
 
     def load_dataset(self, path: Path | str) -> GoldDataset:
         raw = Path(path).read_text(encoding="utf-8")
@@ -124,6 +127,30 @@ class EvaluationHarness:
                 kw.lower() in answer_lower for kw in sample.ground_truth_keywords
             )
 
+        # Fetch retrieval results for context evaluation
+        retrieval_res = self._retrieval_service.search(
+            query=sample.question,
+            limit=5,
+            document_id=document_id,
+        )
+        contexts = [hit.text for hit in retrieval_res.results]
+        faithfulness_score, claim_evals = self._judge.evaluate(answer, contexts)
+
+        # Failure classification and hallucination detection
+        hallucination_detected = False
+        failure_type: str | None = None
+
+        if sample.expected_status == "insufficient_evidence" and status == "answered":
+            hallucination_detected = True
+            failure_type = "hallucination_false_positive"
+        elif status == "insufficient_evidence" and sample.expected_status == "answered":
+            failure_type = "retrieval_miss"
+        elif faithfulness_score < 0.5:
+            hallucination_detected = True
+            failure_type = "unsupported_claim"
+        elif sample.ground_truth_pages and citation_page_recall < 0.5:
+            failure_type = "citation_missing"
+
         return AnswerEvaluation(
             sample_id=sample.sample_id,
             question=sample.question,
@@ -134,6 +161,10 @@ class EvaluationHarness:
             cited_pages=cited_pages,
             citation_page_recall=citation_page_recall,
             contains_expected_keywords=contains_expected,
+            faithfulness_score=faithfulness_score,
+            hallucination_detected=hallucination_detected,
+            failure_type=failure_type,
+            claim_evaluations=claim_evals,
         )
 
     def run_benchmark(
@@ -180,6 +211,9 @@ class EvaluationHarness:
                 cross_page_recall=0.0,
                 status_accuracy=0.0,
                 keyword_containment_rate=0.0,
+                mean_faithfulness=1.0,
+                hallucination_rate=0.0,
+                failure_breakdown={},
             )
 
         hit_1 = sum(1 for e in retrieval_evals if e.hit_at_1) / n
@@ -200,6 +234,15 @@ class EvaluationHarness:
 
         status_acc = sum(1 for a in answer_evals if a.status_match) / len(answer_evals)
         kw_rate = sum(1 for a in answer_evals if a.contains_expected_keywords) / len(answer_evals)
+        mean_faith = sum(a.faithfulness_score for a in answer_evals) / len(answer_evals)
+        hallucination_rate = sum(1 for a in answer_evals if a.hallucination_detected) / len(
+            answer_evals
+        )
+
+        failure_breakdown: dict[str, int] = {}
+        for a in answer_evals:
+            if a.failure_type:
+                failure_breakdown[a.failure_type] = failure_breakdown.get(a.failure_type, 0) + 1
 
         return EvaluationReport(
             dataset_name=dataset_name,
@@ -213,4 +256,7 @@ class EvaluationHarness:
             cross_page_recall=round(cross_page_recall, 4),
             status_accuracy=round(status_acc, 4),
             keyword_containment_rate=round(kw_rate, 4),
+            mean_faithfulness=round(mean_faith, 4),
+            hallucination_rate=round(hallucination_rate, 4),
+            failure_breakdown=failure_breakdown,
         )

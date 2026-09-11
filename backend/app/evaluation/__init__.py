@@ -1,6 +1,11 @@
 """Evaluation framework and benchmark harness for multimodal document intelligence."""
 
 from app.evaluation.harness import EvaluationHarness
+from app.evaluation.judge import (
+    DeterministicFaithfulnessJudge,
+    FaithfulnessJudge,
+    LlmFaithfulnessJudge,
+)
 from app.evaluation.schemas import (
     AnswerEvaluation,
     EvaluationReport,
@@ -13,11 +18,14 @@ from app.evaluation.schemas import (
 
 __all__ = [
     "AnswerEvaluation",
+    "DeterministicFaithfulnessJudge",
     "EvaluationHarness",
     "EvaluationReport",
     "EvaluationRun",
+    "FaithfulnessJudge",
     "GoldDataset",
     "GoldSample",
+    "LlmFaithfulnessJudge",
     "QuestionType",
     "RetrievalEvaluation",
 ]
