@@ -1,0 +1,148 @@
+"""Evaluation runner CLI: executes the benchmark suite and outputs performance metrics."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+# Add backend to sys.path so app modules are resolvable
+repo_root = Path(__file__).resolve().parent.parent
+backend_path = repo_root / "backend"
+if str(backend_path) not in sys.path:
+    sys.path.insert(0, str(backend_path))
+
+from app.core.config import get_settings
+from app.evaluation.harness import EvaluationHarness
+from app.services.documents import DocumentService
+
+
+def run_cli() -> int:
+    parser = argparse.ArgumentParser(
+        description="Run evaluation benchmark over gold dataset for Multimodal Document Intelligence."
+    )
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=repo_root / "evaluation" / "gold_dataset.json",
+        help="Path to gold dataset JSON file.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=repo_root / "evaluation" / "results",
+        help="Directory to save evaluation results.",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=5,
+        help="Number of retrieved chunks to evaluate for Hit@K.",
+    )
+    args = parser.parse_args()
+
+    if not args.dataset.exists():
+        print(f"Error: Dataset not found at {args.dataset}", file=sys.stderr)
+        return 1
+
+    settings = get_settings()
+    doc_service = DocumentService(settings)
+    harness = EvaluationHarness(settings, document_service=doc_service)
+
+    print(f"Loading gold dataset: {args.dataset}")
+    dataset = harness.load_dataset(args.dataset)
+    print(f"Loaded {len(dataset.samples)} samples from '{dataset.name}' (v{dataset.version})")
+
+    # Ingest required evaluation documents if they exist under evaluation/data
+    eval_data_dir = repo_root / "evaluation" / "data"
+    doc_id_map: dict[str, str] = {}
+
+    existing_docs = {doc.filename: doc.document_id for doc in doc_service.list_documents()}
+
+    for sample in dataset.samples:
+        filename = sample.document_filename
+        if filename in doc_id_map:
+            continue
+        if filename in existing_docs:
+            doc_id_map[filename] = existing_docs[filename]
+            print(f"Found existing document: {filename} -> ID {doc_id_map[filename]}")
+        else:
+            pdf_path = eval_data_dir / filename
+            if not pdf_path.exists():
+                print(f"Generating missing document: {pdf_path}")
+                from evaluation.data.generate_eval_docs import generate_sample_financial_report
+
+                generate_sample_financial_report(pdf_path)
+
+            print(f"Ingesting evaluation PDF: {filename}...")
+            record = doc_service.ingest_file(pdf_path, filename=filename)
+            doc_id_map[filename] = record.document_id
+            print(f"Successfully ingested {filename} -> ID {record.document_id}")
+
+    print("\nExecuting evaluation run...")
+    eval_run = harness.run_benchmark(dataset, document_id_map=doc_id_map)
+    report = eval_run.report
+
+    # Output detailed results table
+    print("\n" + "=" * 100)
+    print(f"SAMPLE-BY-SAMPLE EVALUATION BREAKDOWN: {dataset.name}")
+    print("=" * 100)
+    header = f"{'ID':<10} | {'Type':<22} | {'Hit@1':<5} | {'Hit@3':<5} | {'Hit@5':<5} | {'MRR':<5} | {'PageRec':<7} | {'Status':<6} | {'Keywords':<8}"
+    print(header)
+    print("-" * 100)
+
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+    for r_eval, a_eval in zip(eval_run.retrieval_evaluations, eval_run.answer_evaluations):
+        h1 = "YES" if r_eval.hit_at_1 else "NO"
+        h3 = "YES" if r_eval.hit_at_3 else "NO"
+        h5 = "YES" if r_eval.hit_at_5 else "NO"
+        sm = "YES" if a_eval.status_match else "NO"
+        kw = "YES" if a_eval.contains_expected_keywords else "NO"
+
+        line = (
+            f"{r_eval.sample_id:<10} | "
+            f"{r_eval.question_type.value:<22} | "
+            f"{h1:<5} | "
+            f"{h3:<5} | "
+            f"{h5:<5} | "
+            f"{r_eval.reciprocal_rank:<5.2f} | "
+            f"{r_eval.page_recall:<7.2f} | "
+            f"{sm:<6} | "
+            f"{kw:<8}"
+        )
+        print(line)
+
+    print("=" * 100)
+    print("\n" + "=" * 50)
+    print("AGGREGATE BENCHMARK PERFORMANCE REPORT")
+    print("=" * 50)
+    print(f"Total Samples Evaluated       : {report.total_samples}")
+    print(f"Cross-Page Synthesis Samples  : {report.cross_page_samples}")
+    print(f"Retrieval Hit@1               : {report.hit_at_1 * 100:.1f}%")
+    print(f"Retrieval Hit@3               : {report.hit_at_3 * 100:.1f}%")
+    print(f"Retrieval Hit@5               : {report.hit_at_5 * 100:.1f}%")
+    print(f"Mean Reciprocal Rank (MRR)    : {report.mean_reciprocal_rank:.4f}")
+    print(f"Mean Page Recall              : {report.mean_page_recall * 100:.1f}%")
+    print(f"Cross-Page Recall             : {report.cross_page_recall * 100:.1f}%")
+    print(f"Answer Status Accuracy        : {report.status_accuracy * 100:.1f}%")
+    print(f"Keyword Groundedness Rate     : {report.keyword_containment_rate * 100:.1f}%")
+    print("=" * 50)
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    out_file = args.output_dir / f"eval_run_{timestamp_str}.json"
+    out_file.write_text(eval_run.model_dump_json(indent=2), encoding="utf-8")
+    print(f"\nSaved full benchmark report to: {out_file}\n")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(run_cli())

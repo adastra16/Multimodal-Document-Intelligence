@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
@@ -49,25 +50,32 @@ class DocumentService:
             registered_documents.append(await self._register_single_document(file))
         return registered_documents
 
-    async def _register_single_document(self, file: UploadFile) -> DocumentRecord:
-        filename = file.filename or "document.pdf"
-        if not self._is_pdf(filename, file.content_type):
-            raise UnsupportedMediaTypeError("Only PDF uploads are supported")
+    def ingest_file(self, file_path: Path, filename: str | None = None) -> DocumentRecord:
+        resolved_filename = filename or file_path.name
+        file_bytes = file_path.read_bytes()
+        return self.ingest_bytes(file_bytes, resolved_filename)
 
-        document_id = str(uuid4())
-        storage_path = self._repository.uploads_dir / f"{document_id}.pdf"
-        file_bytes = await file.read()
+    def ingest_bytes(
+        self,
+        file_bytes: bytes,
+        filename: str = "document.pdf",
+        content_type: str = "application/pdf",
+    ) -> DocumentRecord:
+        if not self._is_pdf(filename, content_type):
+            raise UnsupportedMediaTypeError("Only PDF uploads are supported")
         if len(file_bytes) > self._settings.max_upload_bytes:
             raise BadRequestError(
                 f"Upload exceeds maximum size of {self._settings.max_upload_mb} MB"
             )
 
+        document_id = str(uuid4())
+        storage_path = self._repository.uploads_dir / f"{document_id}.pdf"
         storage_path.write_bytes(file_bytes)
         now = datetime.now(timezone.utc)
         document = DocumentRecord(
             document_id=document_id,
             filename=filename,
-            content_type=file.content_type or "application/pdf",
+            content_type=content_type,
             size_bytes=len(file_bytes),
             storage_path=str(storage_path),
             status=DocumentStatus.PROCESSING,
@@ -96,6 +104,12 @@ class DocumentService:
             page_count=parsed_document.page_count,
         )
         return self._repository.get_document(document_id)
+
+    async def _register_single_document(self, file: UploadFile) -> DocumentRecord:
+        filename = file.filename or "document.pdf"
+        file_bytes = await file.read()
+        return self.ingest_bytes(file_bytes, filename, file.content_type or "application/pdf")
+
 
     @staticmethod
     def _is_pdf(filename: str, content_type: str | None) -> bool:

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import fitz  # type: ignore[import-not-found, import-untyped]
+    import fitz  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover - exercised when the dependency is missing
     fitz = None
 
