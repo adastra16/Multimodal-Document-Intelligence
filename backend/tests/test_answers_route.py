@@ -35,7 +35,10 @@ def test_answer_endpoint_returns_cited_extractive_evidence(tmp_path: Path) -> No
         document_id = upload.json()["documents"][0]["document_id"]
         response = client.post(
             "/answers",
-            json={"question": "What happened to revenue?", "document_id": document_id},
+            json={
+                "question": "What percentage did revenue increase by in 2025?",
+                "document_id": document_id,
+            },
         )
 
     assert response.status_code == 200

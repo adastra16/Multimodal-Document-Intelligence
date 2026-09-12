@@ -27,10 +27,10 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 256
     retrieval_semantic_weight: float = 0.65
     retrieval_lexical_weight: float = 0.35
-    retrieval_candidate_multiplier: int = 4
+    retrieval_candidate_multiplier: int = 5
     retrieval_rerank_seed_limit: int = 3
     retrieval_expansion_per_seed: int = 3
-    generation_min_evidence_score: float = 0.15
+    generation_min_evidence_score: float = 0.35
 
     ocr_command: str = "tesseract"
     ocr_language: str = "eng"
