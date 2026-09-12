@@ -1,10 +1,12 @@
-.PHONY: install-dev test lint typecheck run
+.PHONY: install-dev test coverage lint typecheck run
 
 install-dev:
 	python -m pip install -e ".[dev]"
 
 test:
 	pytest
+
+coverage: test
 
 lint:
 	ruff check backend
