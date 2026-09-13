@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+data/
+tests/
+multimodal_document_intelligence.egg-info
