@@ -24,6 +24,7 @@ htmlcov/
 
 # Local data, indexes, and uploads (generated at runtime)
 data/
+evaluation/results/
 *.db
 *.sqlite
 *.sqlite3
