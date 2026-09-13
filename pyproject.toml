@@ -2,7 +2,7 @@
 name = "multimodal-document-intelligence"
 version = "0.1.0"
 description = "Question answering over visually rich PDFs with structure-preserving retrieval and citations."
-readme = "SETUP.md"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",
