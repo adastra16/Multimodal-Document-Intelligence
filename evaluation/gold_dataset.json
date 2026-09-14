@@ -1,103 +1,534 @@
 {
-  "name": "acme_multimodal_gold_benchmark",
-  "description": "Gold benchmark dataset for evaluating multimodal retrieval quality, cross-page synthesis, and answer groundedness.",
+  "name": "custom_gold_benchmark",
+  "description": "Evaluation benchmark for multimodal document QA using research papers with text, figures, tables, and cross-page evidence.",
   "version": "1.0.0",
   "samples": [
     {
       "sample_id": "eval-001",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "What was the initial projected revenue target stated in the Q1 executive outlook?",
+      "document_filename": "1706.03762v7.pdf",
+      "question": "What is the Transformer architecture proposed in this paper based on?",
       "question_type": "single_page_factoid",
-      "ground_truth_answer": "The initial projected revenue target stated in the Q1 executive outlook was $120 million for the complete fiscal year.",
-      "ground_truth_pages": [1],
-      "ground_truth_keywords": ["120 million", "$120"],
+      "ground_truth_answer": "The Transformer is based entirely on attention mechanisms, dispensing with recurrence and convolutions.",
+      "ground_truth_pages": [
+        1
+      ],
+      "ground_truth_keywords": [
+        "Transformer",
+        "attention",
+        "recurrence",
+        "convolutions"
+      ],
       "requires_cross_page": false,
       "expected_status": "answered",
-      "metadata": { "section": "Executive Summary and Baseline Targets" }
+      "metadata": {
+        "section": "Abstract"
+      }
     },
     {
       "sample_id": "eval-002",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "How many full-time employees did Acme Corp have by the end of 2024?",
+      "document_filename": "1706.03762v7.pdf",
+      "question": "How many encoder and decoder layers does the base Transformer use?",
       "question_type": "single_page_factoid",
-      "ground_truth_answer": "Operational headcount expanded to 620 full-time employees by the end of 2024.",
-      "ground_truth_pages": [1],
-      "ground_truth_keywords": ["620", "employees"],
+      "ground_truth_answer": "The encoder and decoder are each composed of a stack of 6 identical layers.",
+      "ground_truth_pages": [
+        3
+      ],
+      "ground_truth_keywords": [
+        "encoder",
+        "decoder",
+        "6",
+        "layers"
+      ],
       "requires_cross_page": false,
       "expected_status": "answered",
-      "metadata": { "section": "Executive Summary" }
+      "metadata": {
+        "section": "Encoder and Decoder Stacks"
+      }
     },
     {
       "sample_id": "eval-003",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "What was the total FY24 revenue for the AI Platforms segment?",
-      "question_type": "table_lookup",
-      "ground_truth_answer": "The total FY24 revenue for AI Platforms was $70.0M.",
-      "ground_truth_pages": [2],
-      "ground_truth_keywords": ["70.0M", "$70.0M", "70"],
+      "document_filename": "1706.03762v7.pdf",
+      "question": "What datasets were used to train the Transformer, and how large were the English-German and English-French datasets?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "The WMT 2014 English-German dataset contained about 4.5 million sentence pairs, while the WMT 2014 English-French dataset contained 36 million sentences.",
+      "ground_truth_pages": [
+        7
+      ],
+      "ground_truth_keywords": [
+        "WMT 2014",
+        "English-German",
+        "4.5 million",
+        "English-French",
+        "36M"
+      ],
       "requires_cross_page": false,
       "expected_status": "answered",
-      "metadata": { "table": "Financial Performance by Segment" }
+      "metadata": {
+        "section": "Training Data and Batching"
+      }
     },
     {
       "sample_id": "eval-004",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "What was the consolidated total revenue reported for Q3 FY24?",
+      "document_filename": "1706.03762v7.pdf",
+      "question": "What BLEU score did the Transformer big model achieve on English-to-German, and how long did training take?",
       "question_type": "table_lookup",
-      "ground_truth_answer": "The consolidated total revenue reported for Q3 FY24 was $60.5M.",
-      "ground_truth_pages": [2],
-      "ground_truth_keywords": ["60.5M", "$60.5M"],
+      "ground_truth_answer": "The Transformer big model achieved a BLEU score of 28.4 on English-to-German, and training took 3.5 days on 8 P100 GPUs.",
+      "ground_truth_pages": [
+        8
+      ],
+      "ground_truth_keywords": [
+        "Transformer",
+        "big",
+        "28.4",
+        "3.5 days",
+        "P100"
+      ],
       "requires_cross_page": false,
       "expected_status": "answered",
-      "metadata": { "table": "Financial Performance by Segment" }
+      "metadata": {
+        "section": "Machine Translation Results"
+      }
     },
     {
       "sample_id": "eval-005",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "What was the initial revenue target from page 1, and by what percentage did actual FY24 revenue outperform it on page 3?",
-      "question_type": "cross_page_synthesis",
-      "ground_truth_answer": "The initial revenue target was $120 million (Page 1), and actual consolidated FY24 revenue ($232.0 million) outperformed this guidance baseline by 93.3% (Page 3).",
-      "ground_truth_pages": [1, 3],
-      "ground_truth_keywords": ["120 million", "93.3%"],
+      "document_filename": "1706.03762v7.pdf",
+      "question": "What is the relationship between the Transformer big model configuration and its English-to-German BLEU result?",
+      "question_type": "cross_page_reasoning",
+      "ground_truth_answer": "The Transformer big model uses the larger configuration described in the architecture variations, and it achieves a BLEU score of 28.4 on English-to-German.",
+      "ground_truth_pages": [
+        8,
+        9
+      ],
+      "ground_truth_keywords": [
+        "Transformer big",
+        "28.4",
+        "BLEU",
+        "configuration",
+        "English-German"
+      ],
       "requires_cross_page": true,
       "expected_status": "answered",
-      "metadata": { "requires_pages": [1, 3] }
+      "metadata": {
+        "section": "Results and Model Variations"
+      }
     },
     {
       "sample_id": "eval-006",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "Compare the initial target on page 1 with the consolidated total revenue across quarterly segments on page 2.",
-      "question_type": "cross_page_synthesis",
-      "ground_truth_answer": "The initial target on page 1 was $120 million, whereas consolidated total revenue across quarterly segments on page 2 reached $232.0 million.",
-      "ground_truth_pages": [1, 2],
-      "ground_truth_keywords": ["120", "232"],
-      "requires_cross_page": true,
+      "document_filename": "1810.04805v2.pdf",
+      "question": "What does BERT stand for?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "BERT stands for Bidirectional Encoder Representations from Transformers.",
+      "ground_truth_pages": [
+        1
+      ],
+      "ground_truth_keywords": [
+        "BERT",
+        "Bidirectional Encoder Representations from Transformers"
+      ],
+      "requires_cross_page": false,
       "expected_status": "answered",
-      "metadata": { "requires_pages": [1, 2] }
+      "metadata": {
+        "section": "Abstract"
+      }
     },
     {
       "sample_id": "eval-007",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "What was Acme Corp's total expenditure on national television advertising campaigns in 2020?",
-      "question_type": "unanswerable_negative",
-      "ground_truth_answer": null,
-      "ground_truth_pages": [],
-      "ground_truth_keywords": [],
+      "document_filename": "1810.04805v2.pdf",
+      "question": "What two datasets were used for BERT pre-training?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "BERT was pretrained using BooksCorpus and English Wikipedia.",
+      "ground_truth_pages": [
+        2
+      ],
+      "ground_truth_keywords": [
+        "BooksCorpus",
+        "English Wikipedia",
+        "pre-training"
+      ],
       "requires_cross_page": false,
-      "expected_status": "insufficient_evidence",
-      "metadata": { "test_type": "hallucination_refusal" }
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Pre-training Data"
+      }
     },
     {
       "sample_id": "eval-008",
-      "document_filename": "sample_financial_report.pdf",
-      "question": "Which European country had the highest retail store revenue for Acme Corp in FY24?",
-      "question_type": "unanswerable_negative",
+      "document_filename": "1810.04805v2.pdf",
+      "question": "How large are BERTBASE and BERTLARGE in terms of layers, hidden size, attention heads, and parameters?",
+      "question_type": "table_or_factoid",
+      "ground_truth_answer": "BERTBASE has 12 layers, hidden size 768, 12 attention heads, and 110M parameters. BERTLARGE has 24 layers, hidden size 1024, 16 attention heads, and 340M parameters.",
+      "ground_truth_pages": [
+        3
+      ],
+      "ground_truth_keywords": [
+        "BERTBASE",
+        "BERTLARGE",
+        "12",
+        "24",
+        "768",
+        "1024",
+        "12",
+        "16",
+        "110M",
+        "340M"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Model Architecture"
+      }
+    },
+    {
+      "sample_id": "eval-009",
+      "document_filename": "1810.04805v2.pdf",
+      "question": "What was BERTLARGE's F1 score on the SQuAD 1.1 test set when using the ensemble with TriviaQA?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "BERTLARGE with the ensemble and TriviaQA achieved a test F1 score of 93.2.",
+      "ground_truth_pages": [
+        10
+      ],
+      "ground_truth_keywords": [
+        "BERTLARGE",
+        "Ens.+TriviaQA",
+        "93.2",
+        "SQuAD 1.1"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "SQuAD v1.1"
+      }
+    },
+    {
+      "sample_id": "eval-010",
+      "document_filename": "1810.04805v2.pdf",
+      "question": "How does BERT's pre-training objective relate to its ability to use context from both directions?",
+      "question_type": "cross_page_reasoning",
+      "ground_truth_answer": "BERT uses masked language modeling, which allows the representation to fuse left and right context and therefore enables deep bidirectional representations.",
+      "ground_truth_pages": [
+        1,
+        2
+      ],
+      "ground_truth_keywords": [
+        "masked language model",
+        "left",
+        "right",
+        "context",
+        "bidirectional"
+      ],
+      "requires_cross_page": true,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Introduction and Pre-training"
+      }
+    },
+    {
+      "sample_id": "eval-011",
+      "document_filename": "1512.03385v1.pdf",
+      "question": "What problem are residual networks designed to address?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "Residual networks address the degradation problem that occurs when increasing the depth of plain networks.",
+      "ground_truth_pages": [
+        5
+      ],
+      "ground_truth_keywords": [
+        "ResNet",
+        "degradation",
+        "depth",
+        "plain networks"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Residual Networks"
+      }
+    },
+    {
+      "sample_id": "eval-012",
+      "document_filename": "1512.03385v1.pdf",
+      "question": "What was the top-5 validation error of the 152-layer ResNet on ImageNet?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "The 152-layer ResNet had a top-5 validation error of 4.49%.",
+      "ground_truth_pages": [
+        5
+      ],
+      "ground_truth_keywords": [
+        "ResNet-152",
+        "4.49",
+        "top-5",
+        "validation"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "ImageNet Results"
+      }
+    },
+    {
+      "sample_id": "eval-013",
+      "document_filename": "1512.03385v1.pdf",
+      "question": "What was the test error of the 1202-layer ResNet on CIFAR-10, and how did it compare with the 110-layer ResNet?",
+      "question_type": "cross_page_reasoning",
+      "ground_truth_answer": "The 1202-layer ResNet had a test error of 7.93%, which was worse than the 110-layer ResNet despite having a similar training error.",
+      "ground_truth_pages": [
+        6,
+        7
+      ],
+      "ground_truth_keywords": [
+        "1202-layer",
+        "7.93",
+        "110-layer",
+        "test error",
+        "CIFAR-10"
+      ],
+      "requires_cross_page": true,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "CIFAR-10 Analysis"
+      }
+    },
+    {
+      "sample_id": "eval-014",
+      "document_filename": "1512.03385v1.pdf",
+      "question": "Which ResNet achieved the lowest top-1 error in Table 4?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "ResNet-152 achieved the lowest top-1 error, at 19.38%.",
+      "ground_truth_pages": [
+        6
+      ],
+      "ground_truth_keywords": [
+        "ResNet-152",
+        "19.38",
+        "top-1 error"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "ImageNet Results"
+      }
+    },
+    {
+      "sample_id": "eval-015",
+      "document_filename": "1908.00709v6.pdf",
+      "question": "What four major processes does the AutoML pipeline cover?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "The AutoML pipeline covers data preparation, feature engineering, model generation, and model evaluation.",
+      "ground_truth_pages": [
+        2
+      ],
+      "ground_truth_keywords": [
+        "data preparation",
+        "feature engineering",
+        "model generation",
+        "model evaluation"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "AutoML Pipeline"
+      }
+    },
+    {
+      "sample_id": "eval-016",
+      "document_filename": "1908.00709v6.pdf",
+      "question": "What datasets are used to compare the performance of NAS algorithms in this survey?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "The survey compares NAS algorithms on the CIFAR-10 and ImageNet datasets.",
+      "ground_truth_pages": [
+        1
+      ],
+      "ground_truth_keywords": [
+        "NAS",
+        "CIFAR-10",
+        "ImageNet"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Abstract"
+      }
+    },
+    {
+      "sample_id": "eval-017",
+      "document_filename": "1908.00709v6.pdf",
+      "question": "According to Table 1, which AutoML survey covers data preparation, feature engineering, hyperparameter optimization, and neural architecture search?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "The survey represented as 'Ours' covers data preparation, feature engineering, hyperparameter optimization, and neural architecture search.",
+      "ground_truth_pages": [
+        2
+      ],
+      "ground_truth_keywords": [
+        "Ours",
+        "DP",
+        "FE",
+        "HPO",
+        "NAS"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Comparison of AutoML Surveys"
+      }
+    },
+    {
+      "sample_id": "eval-018",
+      "document_filename": "1908.00709v6.pdf",
+      "question": "What are the main types of optimization methods used in neural architecture search?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "The survey identifies reinforcement learning, evolution-based algorithms, gradient descent, surrogate model-based optimization, and hybrid optimization methods.",
+      "ground_truth_pages": [
+        2
+      ],
+      "ground_truth_keywords": [
+        "reinforcement learning",
+        "evolution",
+        "gradient descent",
+        "SMBO",
+        "hybrid"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Neural Architecture Search"
+      }
+    },
+    {
+      "sample_id": "eval-019",
+      "document_filename": "2210.02875v2.pdf",
+      "question": "What is BINDER designed to generate from a natural language question?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "BINDER generates an executable program in a programming language, optionally containing API calls to language models.",
+      "ground_truth_pages": [
+        2
+      ],
+      "ground_truth_keywords": [
+        "BINDER",
+        "executable program",
+        "API calls",
+        "language model"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "BINDER Framework"
+      }
+    },
+    {
+      "sample_id": "eval-020",
+      "document_filename": "2210.02875v2.pdf",
+      "question": "What was the overall execution accuracy of Codex BINDER on the WIKITQ development set?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "Codex BINDER achieved 65.0% overall execution accuracy on the WIKITQ development set.",
+      "ground_truth_pages": [
+        5
+      ],
+      "ground_truth_keywords": [
+        "Codex BINDER",
+        "65.0",
+        "WIKITQ",
+        "Overall"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "WIKITQ Main Results"
+      }
+    },
+    {
+      "sample_id": "eval-021",
+      "document_filename": "2210.02875v2.pdf",
+      "question": "Why does BINDER use API calls in addition to symbolic programming?",
+      "question_type": "cross_page_reasoning",
+      "ground_truth_answer": "API calls allow a language model to handle parts of a question that the symbolic programming language cannot represent or solve, while the resulting values can still be integrated into and executed by the symbolic program.",
+      "ground_truth_pages": [
+        2,
+        3
+      ],
+      "ground_truth_keywords": [
+        "API calls",
+        "symbolic",
+        "language model",
+        "program",
+        "unanswerable"
+      ],
+      "requires_cross_page": true,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "BINDER Parsing and Execution"
+      }
+    },
+    {
+      "sample_id": "eval-022",
+      "document_filename": "2210.02875v2.pdf",
+      "question": "What was the most common error type in the BINDER SQL error analysis on WIKITQ?",
+      "question_type": "table_lookup",
+      "ground_truth_answer": "Semantic errors were the most common error type, accounting for 64% of the analyzed errors.",
+      "ground_truth_pages": [
+        7
+      ],
+      "ground_truth_keywords": [
+        "Semantic error",
+        "64%",
+        "WIKITQ"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Interpretability and Error Analysis"
+      }
+    },
+    {
+      "sample_id": "eval-023",
+      "document_filename": "1810.04805v2.pdf",
+      "question": "What was the GLUE score reported for BERT in the abstract?",
+      "question_type": "single_page_factoid",
+      "ground_truth_answer": "BERT achieved a GLUE score of 80.5%.",
+      "ground_truth_pages": [
+        1
+      ],
+      "ground_truth_keywords": [
+        "GLUE",
+        "80.5%"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "answered",
+      "metadata": {
+        "section": "Abstract"
+      }
+    },
+    {
+      "sample_id": "eval-024",
+      "document_filename": "1512.03385v1.pdf",
+      "question": "Does the ResNet paper report that a 5000-layer ResNet achieved a test error below 1% on CIFAR-10?",
+      "question_type": "unanswerable",
       "ground_truth_answer": null,
       "ground_truth_pages": [],
-      "ground_truth_keywords": [],
+      "ground_truth_keywords": [
+        "5000-layer",
+        "below 1%"
+      ],
       "requires_cross_page": false,
       "expected_status": "insufficient_evidence",
-      "metadata": { "test_type": "hallucination_refusal" }
+      "metadata": {
+        "section": "Unanswerable Test"
+      }
+    },
+    {
+      "sample_id": "eval-025",
+      "document_filename": "1706.03762v7.pdf",
+      "question": "What BLEU score did the Transformer achieve on Japanese-to-English translation?",
+      "question_type": "unanswerable",
+      "ground_truth_answer": null,
+      "ground_truth_pages": [],
+      "ground_truth_keywords": [
+        "Japanese-to-English",
+        "BLEU"
+      ],
+      "requires_cross_page": false,
+      "expected_status": "insufficient_evidence",
+      "metadata": {
+        "section": "Unanswerable Test"
+      }
     }
   ]
 }

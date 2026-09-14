@@ -71,10 +71,9 @@ def run_cli() -> int:
         else:
             pdf_path = eval_data_dir / filename
             if not pdf_path.exists():
-                print(f"Generating missing document: {pdf_path}")
-                from evaluation.data.generate_eval_docs import generate_sample_financial_report
-
-                generate_sample_financial_report(pdf_path)
+                print(f"Error: Required document not found: {pdf_path}", file=sys.stderr)
+                print("Please place the required PDFs into evaluation/data/ before running the evaluation.", file=sys.stderr)
+                return 1
 
             print(f"Ingesting evaluation PDF: {filename}...")
             record = doc_service.ingest_file(pdf_path, filename=filename)
