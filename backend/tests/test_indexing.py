@@ -53,6 +53,10 @@ def test_uploaded_document_populates_vector_index(tmp_path: Path) -> None:
         chunk for chunk in indexed_chunks if chunk["chunk_type"].value == "cross_page"
     )
     assert bridge_chunk["parent_chunk_id"] is not None
+    block_chunk = next(chunk for chunk in indexed_chunks if chunk["chunk_type"].value == "block")
+    assert block_chunk["parent_chunk_id"] is not None
+    assert block_chunk["bbox"] is not None
+    assert block_chunk["chunk_metadata"]["block_type"] == "text"
 
     query_results = repository.search(
         indexed_chunks[0]["embedding"],

@@ -30,6 +30,7 @@ class RegionType(str, Enum):
 
 
 class ChunkType(str, Enum):
+    BLOCK = "block"
     PAGE = "page"
     SECTION = "section"
     WINDOW = "window"
