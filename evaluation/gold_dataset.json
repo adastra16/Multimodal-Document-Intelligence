@@ -93,7 +93,7 @@
       "sample_id": "eval-005",
       "document_filename": "1706.03762v7.pdf",
       "question": "What is the relationship between the Transformer big model configuration and its English-to-German BLEU result?",
-      "question_type": "cross_page_reasoning",
+      "question_type": "cross_page_synthesis",
       "ground_truth_answer": "The Transformer big model uses the larger configuration described in the architecture variations, and it achieves a BLEU score of 28.4 on English-to-German.",
       "ground_truth_pages": [
         8,
@@ -155,7 +155,7 @@
       "sample_id": "eval-008",
       "document_filename": "1810.04805v2.pdf",
       "question": "How large are BERTBASE and BERTLARGE in terms of layers, hidden size, attention heads, and parameters?",
-      "question_type": "table_or_factoid",
+      "question_type": "table_lookup",
       "ground_truth_answer": "BERTBASE has 12 layers, hidden size 768, 12 attention heads, and 110M parameters. BERTLARGE has 24 layers, hidden size 1024, 16 attention heads, and 340M parameters.",
       "ground_truth_pages": [
         3
@@ -203,7 +203,7 @@
       "sample_id": "eval-010",
       "document_filename": "1810.04805v2.pdf",
       "question": "How does BERT's pre-training objective relate to its ability to use context from both directions?",
-      "question_type": "cross_page_reasoning",
+      "question_type": "cross_page_synthesis",
       "ground_truth_answer": "BERT uses masked language modeling, which allows the representation to fuse left and right context and therefore enables deep bidirectional representations.",
       "ground_truth_pages": [
         1,
@@ -268,7 +268,7 @@
       "sample_id": "eval-013",
       "document_filename": "1512.03385v1.pdf",
       "question": "What was the test error of the 1202-layer ResNet on CIFAR-10, and how did it compare with the 110-layer ResNet?",
-      "question_type": "cross_page_reasoning",
+      "question_type": "cross_page_synthesis",
       "ground_truth_answer": "The 1202-layer ResNet had a test error of 7.93%, which was worse than the 110-layer ResNet despite having a similar training error.",
       "ground_truth_pages": [
         6,
@@ -438,7 +438,7 @@
       "sample_id": "eval-021",
       "document_filename": "2210.02875v2.pdf",
       "question": "Why does BINDER use API calls in addition to symbolic programming?",
-      "question_type": "cross_page_reasoning",
+      "question_type": "cross_page_synthesis",
       "ground_truth_answer": "API calls allow a language model to handle parts of a question that the symbolic programming language cannot represent or solve, while the resulting values can still be integrated into and executed by the symbolic program.",
       "ground_truth_pages": [
         2,
@@ -500,7 +500,7 @@
       "sample_id": "eval-024",
       "document_filename": "1512.03385v1.pdf",
       "question": "Does the ResNet paper report that a 5000-layer ResNet achieved a test error below 1% on CIFAR-10?",
-      "question_type": "unanswerable",
+      "question_type": "unanswerable_negative",
       "ground_truth_answer": null,
       "ground_truth_pages": [],
       "ground_truth_keywords": [
@@ -517,7 +517,7 @@
       "sample_id": "eval-025",
       "document_filename": "1706.03762v7.pdf",
       "question": "What BLEU score did the Transformer achieve on Japanese-to-English translation?",
-      "question_type": "unanswerable",
+      "question_type": "unanswerable_negative",
       "ground_truth_answer": null,
       "ground_truth_pages": [],
       "ground_truth_keywords": [

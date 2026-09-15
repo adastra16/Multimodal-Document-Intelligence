@@ -32,19 +32,21 @@ class DeterministicReranker:
         salient_terms = {t for t in all_terms if t not in STOPWORDS and len(t) > 1}
         target_terms = salient_terms if salient_terms else all_terms
 
-        normalized_query = " ".join(query.lower().split())
+        raw_terms = set(re.findall(r"[A-Za-z0-9]+", query))
+        specific_entities = {
+            t.lower() for t in raw_terms 
+            if len(t) > 1 and t.lower() not in STOPWORDS and (any(c.isdigit() for c in t) or any(c.isupper() for c in t))
+        }
+
         ranked: list[RetrievalHit] = []
 
         for candidate in candidates:
             text_terms = set(re.findall(r"[A-Za-z0-9]+", candidate.text.lower()))
             matched_salient = target_terms & text_terms
+            matched_specific = specific_entities & text_terms
 
             coverage = len(matched_salient) / len(target_terms) if target_terms else 0.0
-            phrase_bonus = (
-                1.0
-                if normalized_query and normalized_query in candidate.text.lower()
-                else 0.0
-            )
+            entity_bonus = len(matched_specific) / len(specific_entities) if specific_entities else 0.0
 
             # If the query had salient terms but this chunk matched NONE of them,
             # heavily dampen the score to prevent false-positive hallucination.
@@ -54,7 +56,7 @@ class DeterministicReranker:
                 score = round(
                     (0.45 * candidate.hybrid_score)
                     + (0.45 * coverage)
-                    + (0.10 * phrase_bonus),
+                    + (0.10 * entity_bonus),
                     4,
                 )
 
