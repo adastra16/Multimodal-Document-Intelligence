@@ -84,12 +84,10 @@ def test_structure_aware_chunker_builds_page_windows_and_bridges() -> None:
     chunks = chunker.build(_document_with_pages())
 
     page_chunks = [chunk for chunk in chunks if chunk.chunk_type.value == "page"]
-    block_chunks = [chunk for chunk in chunks if chunk.chunk_type.value == "block"]
     window_chunks = [chunk for chunk in chunks if chunk.chunk_type.value == "window"]
     bridge_chunks = [chunk for chunk in chunks if chunk.chunk_type.value == "cross_page"]
 
     assert len(page_chunks) == 2
-    assert len(block_chunks) == 5
     assert window_chunks
     assert len(bridge_chunks) == 1
     assert page_chunks[0].child_chunk_ids
@@ -97,8 +95,3 @@ def test_structure_aware_chunker_builds_page_windows_and_bridges() -> None:
     assert bridge_chunks[0].page_numbers == [1, 2]
     assert "Alpha conclusion" in bridge_chunks[0].text
     assert "Beta intro" in bridge_chunks[0].text
-    alpha_block = next(chunk for chunk in block_chunks if chunk.source_block_ids == ["doc-p1-b2"])
-    assert alpha_block.parent_chunk_id == page_chunks[0].chunk_id
-    assert alpha_block.page_numbers == [1]
-    assert alpha_block.bbox == BoundingBox(x0=10, y0=50, x1=200, y1=90)
-    assert alpha_block.metadata["block_type"] == "text"

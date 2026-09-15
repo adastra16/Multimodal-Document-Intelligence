@@ -40,10 +40,6 @@ class StructureAwareChunker:
             page_chunks.append(page_chunk)
             chunks.append(page_chunk)
 
-            block_chunks = self._build_block_chunks(document.document_id, page, text_units)
-            page_chunk.child_chunk_ids.extend(chunk.chunk_id for chunk in block_chunks)
-            chunks.extend(block_chunks)
-
             window_chunks = self._build_window_chunks(document.document_id, page, text_units)
             page_chunk.child_chunk_ids.extend(chunk.chunk_id for chunk in window_chunks)
             chunks.extend(window_chunks)
@@ -167,31 +163,3 @@ class StructureAwareChunker:
             x1=max(bbox.x1 for bbox in concrete),
             y1=max(bbox.y1 for bbox in concrete),
         )
-
-    @staticmethod
-    def _build_block_chunks(
-        document_id: str,
-        page: DocumentPage,
-        text_units: list[DocumentBlock],
-    ) -> list[DocumentChunk]:
-        page_chunk_id = f"{document_id}-page-{page.page_number}"
-        return [
-            DocumentChunk(
-                chunk_id=f"{block.block_id}-chunk",
-                document_id=document_id,
-                chunk_type=ChunkType.BLOCK,
-                text=block.text.strip(),
-                page_numbers=[block.page_number],
-                parent_chunk_id=page_chunk_id,
-                source_block_ids=[block.block_id],
-                bbox=block.bbox,
-                metadata={
-                    "chunking_strategy": "document_block",
-                    "block_type": block.block_type.value,
-                    "reading_order": block.reading_order,
-                    "section_title": block.section_title,
-                },
-            )
-            for block in text_units
-            if block.text and block.text.strip()
-        ]

@@ -61,7 +61,6 @@ class HybridRetriever:
             page_numbers = cast(list[int], candidate["page_numbers"])
             source_block_ids = cast(list[str], candidate["source_block_ids"])
             embedding_dim = cast(int, candidate["embedding_dim"])
-            chunk_metadata = cast(dict[str, object], candidate["chunk_metadata"])
             hits.append(
                 RetrievalHit(
                     chunk_id=str(candidate["chunk_id"]),
@@ -75,11 +74,9 @@ class HybridRetriever:
                     hybrid_score=hybrid_score,
                     matched_terms=matched_terms,
                     metadata={
-                        **chunk_metadata,
                         "chunk_type": chunk_type.value,
                         "embedding_dim": embedding_dim,
                         "parent_chunk_id": candidate.get("parent_chunk_id"),
-                        "bbox": candidate.get("bbox"),
                     },
                 )
             )

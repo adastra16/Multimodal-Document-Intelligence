@@ -44,8 +44,6 @@ class VectorIndexRepository:
                     page_numbers TEXT NOT NULL,
                     source_block_ids TEXT NOT NULL,
                     parent_chunk_id TEXT,
-                    bbox TEXT,
-                    chunk_metadata TEXT NOT NULL DEFAULT '{}',
                     embedding TEXT NOT NULL,
                     embedding_dim INTEGER NOT NULL,
                     created_at TEXT NOT NULL
@@ -60,16 +58,8 @@ class VectorIndexRepository:
                 row["name"]
                 for row in connection.execute("PRAGMA table_info(chunk_embeddings)").fetchall()
             }
-            missing_columns = {
-                "parent_chunk_id": "TEXT",
-                "bbox": "TEXT",
-                "chunk_metadata": "TEXT NOT NULL DEFAULT '{}'",
-            }
-            for column, definition in missing_columns.items():
-                if column not in columns:
-                    connection.execute(
-                        f"ALTER TABLE chunk_embeddings ADD COLUMN {column} {definition}"
-                    )
+            if "parent_chunk_id" not in columns:
+                connection.execute("ALTER TABLE chunk_embeddings ADD COLUMN parent_chunk_id TEXT")
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_chunk_type "
                 "ON chunk_embeddings(chunk_type)"
@@ -85,9 +75,8 @@ class VectorIndexRepository:
                 """
                 INSERT INTO chunk_embeddings (
                     chunk_id, document_id, chunk_type, text, page_numbers,
-                    source_block_ids, parent_chunk_id, bbox, chunk_metadata, embedding,
-                    embedding_dim, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_block_ids, parent_chunk_id, embedding, embedding_dim, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(chunk_id) DO UPDATE SET
                     document_id = excluded.document_id,
                     chunk_type = excluded.chunk_type,
@@ -95,8 +84,6 @@ class VectorIndexRepository:
                     page_numbers = excluded.page_numbers,
                     source_block_ids = excluded.source_block_ids,
                     parent_chunk_id = excluded.parent_chunk_id,
-                    bbox = excluded.bbox,
-                    chunk_metadata = excluded.chunk_metadata,
                     embedding = excluded.embedding,
                     embedding_dim = excluded.embedding_dim,
                     created_at = excluded.created_at
@@ -109,8 +96,6 @@ class VectorIndexRepository:
                     json.dumps(chunk.page_numbers),
                     json.dumps(chunk.source_block_ids),
                     chunk.parent_chunk_id,
-                    json.dumps(chunk.bbox.model_dump()) if chunk.bbox is not None else None,
-                    json.dumps(chunk.metadata),
                     json.dumps(embedding),
                     len(embedding),
                     self._serialize_datetime(datetime.now(timezone.utc)),
@@ -126,9 +111,8 @@ class VectorIndexRepository:
                     """
                     INSERT INTO chunk_embeddings (
                         chunk_id, document_id, chunk_type, text, page_numbers,
-                        source_block_ids, parent_chunk_id, bbox, chunk_metadata, embedding,
-                        embedding_dim, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        source_block_ids, parent_chunk_id, embedding, embedding_dim, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(chunk_id) DO UPDATE SET
                         document_id = excluded.document_id,
                         chunk_type = excluded.chunk_type,
@@ -136,8 +120,6 @@ class VectorIndexRepository:
                         page_numbers = excluded.page_numbers,
                         source_block_ids = excluded.source_block_ids,
                         parent_chunk_id = excluded.parent_chunk_id,
-                        bbox = excluded.bbox,
-                        chunk_metadata = excluded.chunk_metadata,
                         embedding = excluded.embedding,
                         embedding_dim = excluded.embedding_dim,
                         created_at = excluded.created_at
@@ -150,8 +132,6 @@ class VectorIndexRepository:
                         json.dumps(chunk.page_numbers),
                         json.dumps(chunk.source_block_ids),
                         chunk.parent_chunk_id,
-                        json.dumps(chunk.bbox.model_dump()) if chunk.bbox is not None else None,
-                        json.dumps(chunk.metadata),
                         json.dumps(embedding),
                         len(embedding),
                         self._serialize_datetime(datetime.now(timezone.utc)),
@@ -189,14 +169,6 @@ class VectorIndexRepository:
             row = connection.execute("SELECT COUNT(*) AS count FROM chunk_embeddings").fetchone()
         return int(row["count"] if row is not None else 0)
 
-    def has_chunk_type(self, document_id: str, chunk_type: ChunkType) -> bool:
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT 1 FROM chunk_embeddings WHERE document_id = ? AND chunk_type = ? LIMIT 1",
-                (document_id, chunk_type.value),
-            ).fetchone()
-        return row is not None
-
     @staticmethod
     def _deserialize_row(row: sqlite3.Row) -> dict[str, object]:
         return {
@@ -207,8 +179,6 @@ class VectorIndexRepository:
             "page_numbers": json.loads(row["page_numbers"]),
             "source_block_ids": json.loads(row["source_block_ids"]),
             "parent_chunk_id": row["parent_chunk_id"],
-            "bbox": json.loads(row["bbox"]) if row["bbox"] is not None else None,
-            "chunk_metadata": json.loads(row["chunk_metadata"]),
             "embedding": json.loads(row["embedding"]),
             "embedding_dim": row["embedding_dim"],
             "created_at": row["created_at"],
