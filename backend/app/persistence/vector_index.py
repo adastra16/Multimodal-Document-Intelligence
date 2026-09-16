@@ -169,6 +169,18 @@ class VectorIndexRepository:
             row = connection.execute("SELECT COUNT(*) AS count FROM chunk_embeddings").fetchone()
         return int(row["count"] if row is not None else 0)
 
+    def delete_document_chunks(self, document_id: str) -> None:
+        """Remove every vector entry owned by a document."""
+        with self._connect() as connection:
+            connection.execute(
+                "DELETE FROM chunk_embeddings WHERE document_id = ?", (document_id,)
+            )
+
+    def delete_legacy_block_chunks(self) -> None:
+        """Remove index rows written by the reverted block-retrieval experiment."""
+        with self._connect() as connection:
+            connection.execute("DELETE FROM chunk_embeddings WHERE chunk_type = 'block'")
+
     @staticmethod
     def _deserialize_row(row: sqlite3.Row) -> dict[str, object]:
         return {

@@ -45,6 +45,13 @@ class DocumentStatus(str, Enum):
     FAILED = "failed"
 
 
+class DocumentOrigin(str, Enum):
+    """Identifies whether a document belongs to the product UI or an internal benchmark."""
+
+    USER_UPLOAD = "user_upload"
+    EVALUATION = "evaluation"
+
+
 class BoundingBox(BaseModel):
     x0: float = Field(ge=0)
     y0: float = Field(ge=0)
@@ -102,6 +109,7 @@ class DocumentRecord(BaseModel):
     content_type: str
     size_bytes: int
     storage_path: str
+    origin: DocumentOrigin = DocumentOrigin.USER_UPLOAD
     status: DocumentStatus
     page_count: int | None = None
     created_at: datetime

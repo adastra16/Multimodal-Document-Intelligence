@@ -55,30 +55,26 @@ def run_cli() -> int:
     dataset = harness.load_dataset(args.dataset)
     print(f"Loaded {len(dataset.samples)} samples from '{dataset.name}' (v{dataset.version})")
 
-    # Ingest required evaluation documents if they exist under evaluation/data
+    # Evaluation fixtures are stored as internal documents and never appear in GET /documents.
     eval_data_dir = repo_root / "evaluation" / "data"
     doc_id_map: dict[str, str] = {}
 
-    existing_docs = {doc.filename: doc.document_id for doc in doc_service.list_documents()}
-
+    evaluation_filenames = {sample.document_filename for sample in dataset.samples}
+    doc_service.prepare_evaluation_documents(evaluation_filenames)
     for sample in dataset.samples:
         filename = sample.document_filename
         if filename in doc_id_map:
             continue
-        if filename in existing_docs:
-            doc_id_map[filename] = existing_docs[filename]
-            print(f"Found existing document: {filename} -> ID {doc_id_map[filename]}")
-        else:
-            pdf_path = eval_data_dir / filename
-            if not pdf_path.exists():
-                print(f"Error: Required document not found: {pdf_path}", file=sys.stderr)
-                print("Please place the required PDFs into evaluation/data/ before running the evaluation.", file=sys.stderr)
-                return 1
+        pdf_path = eval_data_dir / filename
+        if not pdf_path.exists():
+            print(f"Error: Required document not found: {pdf_path}", file=sys.stderr)
+            print("Please place the required PDFs into evaluation/data/ before running the evaluation.", file=sys.stderr)
+            return 1
 
-            print(f"Ingesting evaluation PDF: {filename}...")
-            record = doc_service.ingest_file(pdf_path, filename=filename)
-            doc_id_map[filename] = record.document_id
-            print(f"Successfully ingested {filename} -> ID {record.document_id}")
+        print(f"Refreshing evaluation PDF: {filename}...")
+        record = doc_service.refresh_evaluation_document(pdf_path, filename=filename)
+        doc_id_map[filename] = record.document_id
+        print(f"Evaluation PDF ready: {filename} -> ID {record.document_id}")
 
     print("\nExecuting evaluation run...")
     eval_run = harness.run_benchmark(dataset, document_id_map=doc_id_map)

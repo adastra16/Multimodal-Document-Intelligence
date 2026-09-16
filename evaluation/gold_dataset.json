@@ -138,7 +138,7 @@
       "question_type": "single_page_factoid",
       "ground_truth_answer": "BERT was pretrained using BooksCorpus and English Wikipedia.",
       "ground_truth_pages": [
-        2
+        5
       ],
       "ground_truth_keywords": [
         "BooksCorpus",
@@ -185,7 +185,7 @@
       "question_type": "table_lookup",
       "ground_truth_answer": "BERTLARGE with the ensemble and TriviaQA achieved a test F1 score of 93.2.",
       "ground_truth_pages": [
-        10
+        7
       ],
       "ground_truth_keywords": [
         "BERTLARGE",
@@ -420,7 +420,8 @@
       "question_type": "table_lookup",
       "ground_truth_answer": "Codex BINDER achieved 65.0% overall execution accuracy on the WIKITQ development set.",
       "ground_truth_pages": [
-        5
+        5,
+        6
       ],
       "ground_truth_keywords": [
         "Codex BINDER",

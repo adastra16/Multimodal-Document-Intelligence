@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.core.config import Settings
 from app.core.errors import ConflictError, NotFoundError
-from app.models.document import DocumentRecord, DocumentStatus
+from app.models.document import DocumentOrigin, DocumentRecord, DocumentStatus
 
 
 class DocumentRepository:
@@ -46,6 +46,7 @@ class DocumentRepository:
                     content_type TEXT NOT NULL,
                     size_bytes INTEGER NOT NULL,
                     storage_path TEXT NOT NULL,
+                    origin TEXT NOT NULL DEFAULT 'user_upload',
                     status TEXT NOT NULL,
                     page_count INTEGER,
                     created_at TEXT NOT NULL,
@@ -57,6 +58,13 @@ class DocumentRepository:
                 "CREATE INDEX IF NOT EXISTS idx_documents_status_created_at "
                 "ON documents(status, created_at DESC)"
             )
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(documents)").fetchall()
+            }
+            if "origin" not in columns:
+                connection.execute(
+                    "ALTER TABLE documents ADD COLUMN origin TEXT NOT NULL DEFAULT 'user_upload'"
+                )
 
     @staticmethod
     def _serialize_datetime(value: datetime) -> str:
@@ -70,6 +78,7 @@ class DocumentRepository:
             content_type=row["content_type"],
             size_bytes=row["size_bytes"],
             storage_path=row["storage_path"],
+            origin=DocumentOrigin(row["origin"]),
             status=DocumentStatus(row["status"]),
             page_count=row["page_count"],
             created_at=datetime.fromisoformat(row["created_at"]),
@@ -82,9 +91,9 @@ class DocumentRepository:
                 connection.execute(
                     """
                     INSERT INTO documents (
-                        document_id, filename, content_type, size_bytes, storage_path,
+                        document_id, filename, content_type, size_bytes, storage_path, origin,
                         status, page_count, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         document.document_id,
@@ -92,6 +101,7 @@ class DocumentRepository:
                         document.content_type,
                         document.size_bytes,
                         document.storage_path,
+                        document.origin.value,
                         document.status.value,
                         document.page_count,
                         self._serialize_datetime(document.created_at),
@@ -102,10 +112,42 @@ class DocumentRepository:
                 raise ConflictError(f"Document {document.document_id} already exists") from exc
         return document
 
-    def list_documents(self) -> list[DocumentRecord]:
+    def list_documents(self, origin: DocumentOrigin | None = None) -> list[DocumentRecord]:
         with self._connect() as connection:
-            rows = connection.execute("SELECT * FROM documents ORDER BY created_at DESC").fetchall()
+            if origin is None:
+                rows = connection.execute(
+                    "SELECT * FROM documents ORDER BY created_at DESC"
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM documents WHERE origin = ? ORDER BY created_at DESC",
+                    (origin.value,),
+                ).fetchall()
         return [self._deserialize_row(row) for row in rows]
+
+    def mark_filenames_as_evaluation(self, filenames: set[str]) -> None:
+        """One-time migration for benchmark documents ingested before origins existed."""
+        if not filenames:
+            return
+        placeholders = ", ".join("?" for _ in filenames)
+        with self._connect() as connection:
+            connection.execute(
+                f"UPDATE documents SET origin = ? WHERE filename IN ({placeholders})",
+                (DocumentOrigin.EVALUATION.value, *sorted(filenames)),
+            )
+
+    def delete(self, document: DocumentRecord) -> None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM documents WHERE document_id = ?", (document.document_id,)
+            )
+            if cursor.rowcount == 0:
+                raise NotFoundError(f"Document {document.document_id} not found")
+        self._artifact_path(document.document_id).unlink(missing_ok=True)
+        Path(document.storage_path).unlink(missing_ok=True)
+
+    def delete_artifact(self, document_id: str) -> None:
+        self._artifact_path(document_id).unlink(missing_ok=True)
 
     def get_document(self, document_id: str) -> DocumentRecord:
         with self._connect() as connection:

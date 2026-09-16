@@ -1,6 +1,6 @@
 """Document upload and lookup endpoints."""
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from app.api.deps import get_app_settings
@@ -47,7 +47,7 @@ async def upload_documents(
 def list_documents(
     service: DocumentService = Depends(_get_document_service),
 ) -> DocumentListResponse:
-    documents = service.list_documents()
+    documents = service.list_uploaded_documents()
     return DocumentListResponse(documents=[_to_summary(document) for document in documents])
 
 
@@ -56,7 +56,7 @@ def get_document_file(
     document_id: str,
     service: DocumentService = Depends(_get_document_service),
 ) -> FileResponse:
-    document = service.get_document(document_id)
+    document = service.get_uploaded_document(document_id)
     return FileResponse(
         path=document.storage_path,
         media_type=document.content_type,
@@ -70,9 +70,18 @@ def get_document(
     document_id: str,
     service: DocumentService = Depends(_get_document_service),
 ) -> DocumentDetailResponse:
-    document = service.get_document(document_id)
+    document = service.get_uploaded_document(document_id)
     return DocumentDetailResponse(
         **_to_summary(document).model_dump(),
         pages=document.pages,
         chunks=document.chunks,
     )
+
+
+@router.delete("/{document_id}", status_code=204)
+def delete_document(
+    document_id: str,
+    service: DocumentService = Depends(_get_document_service),
+) -> Response:
+    service.delete_uploaded_document(document_id)
+    return Response(status_code=204)

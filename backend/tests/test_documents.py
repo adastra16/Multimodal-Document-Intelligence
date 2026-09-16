@@ -7,6 +7,8 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings, get_settings
 from app.main import create_app
+from app.models.document import DocumentOrigin
+from app.services.documents import DocumentService
 
 
 def _build_client(tmp_path: Path) -> TestClient:
@@ -78,3 +80,30 @@ def test_rejects_non_pdf_upload(tmp_path: Path) -> None:
     assert response.status_code == 415
     body = response.json()
     assert body["error"]["code"] == "unsupported_media_type"
+
+
+def test_list_excludes_evaluation_documents_and_delete_removes_upload_data(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "sample.pdf"
+    _create_pdf(pdf_path)
+    settings = Settings(
+        app_env="test",
+        data_dir=tmp_path / "data",
+        database_url=f"sqlite:///{(tmp_path / 'data' / 'app.db').as_posix()}",
+    )
+    with _build_client(tmp_path) as client:
+        upload = client.post(
+            "/documents",
+            files=[("files", ("sample.pdf", pdf_path.read_bytes(), "application/pdf"))],
+        )
+        document_id = upload.json()["documents"][0]["document_id"]
+        evaluation = DocumentService(settings).ingest_file(pdf_path, "benchmark.pdf")
+
+        listed = client.get("/documents")
+        assert [item["document_id"] for item in listed.json()["documents"]] == [document_id]
+        assert evaluation.origin == DocumentOrigin.EVALUATION
+
+        delete_response = client.delete(f"/documents/{document_id}")
+        assert delete_response.status_code == 204
+        assert client.get("/documents").json()["documents"] == []
+        assert client.get(f"/documents/{document_id}").status_code == 404
+        assert client.delete(f"/documents/{evaluation.document_id}").status_code == 403

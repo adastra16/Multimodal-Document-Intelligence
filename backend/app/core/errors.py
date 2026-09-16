@@ -32,6 +32,11 @@ class ConflictError(AppError):
         super().__init__(code="conflict", message=message, status_code=409)
 
 
+class ForbiddenError(AppError):
+    def __init__(self, message: str = "This action is not allowed") -> None:
+        super().__init__(code="forbidden", message=message, status_code=403)
+
+
 class BadRequestError(AppError):
     def __init__(self, message: str = "Bad request") -> None:
         super().__init__(code="bad_request", message=message, status_code=400)
