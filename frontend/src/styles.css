@@ -2,8 +2,8 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, textarea { font: inherit; }
-.workspace { min-height: 100vh; display: grid; grid-template-columns: minmax(245px, 320px) minmax(420px, 1fr) minmax(280px, 360px); }
-.sidebar { padding: 28px 18px; background: #101827; color: #eff5ff; display: flex; flex-direction: column; gap: 22px; }
+.workspace { height: 100vh; min-height: 0; display: grid; grid-template-columns: minmax(245px, 320px) minmax(0, 1fr) minmax(300px, 360px); overflow: hidden; }
+.sidebar { min-height: 0; padding: 28px 18px; background: #101827; color: #eff5ff; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
 h1, h2, p { margin: 0; }
 h1 { font-size: 1.4rem; }
 h2 { font-size: 1.2rem; }
@@ -11,13 +11,17 @@ h2 { font-size: 1.2rem; }
 .upload-button { display: block; padding: 11px 14px; border-radius: 8px; background: #52d2b6; color: #09221e; font-weight: 700; text-align: center; cursor: pointer; }
 .upload-button input { display: none; }
 .document-list { display: grid; gap: 8px; overflow-y: auto; }
-.document { width: 100%; padding: 12px; border: 1px solid #2c3a50; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; text-align: left; }
+.document-row { display: flex; gap: 6px; align-items: stretch; }
+.document { min-width: 0; flex: 1; padding: 12px; border: 1px solid #2c3a50; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; text-align: left; }
 .document:hover, .document.active { background: #1e2b40; border-color: #52d2b6; }
 .document span, .document small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .document small { margin-top: 5px; color: #aab8ce; }
-.viewer { min-width: 0; padding: 28px; display: flex; flex-direction: column; gap: 18px; }
+.delete-document { width: 38px; border: 1px solid #2c3a50; border-radius: 8px; background: transparent; color: #d9e2f2; cursor: pointer; font-size: 1.1rem; }
+.delete-document:hover:not(:disabled) { background: #4a2028; border-color: #ff8c95; color: white; }
+.delete-document:disabled { cursor: wait; opacity: .65; }
+.viewer { min-width: 0; min-height: 0; padding: 28px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
 .viewer header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.pdf-canvas-viewer { display: grid; gap: 12px; min-width: 0; }
+.pdf-canvas-viewer { display: grid; gap: 12px; min-width: 0; min-height: 0; }
 .page-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .page-controls button { padding: 6px 12px; border: 1px solid #b8c3d7; border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #1e293b; transition: all 0.15s ease; }
 .page-controls button:hover:not(:disabled) { background: #e2e8f0; border-color: #94a3b8; }
@@ -27,13 +31,13 @@ h2 { font-size: 1.2rem; }
 .zoom-controls button { border: 0; border-radius: 0; padding: 5px 9px; background: #f8fafc; font-size: 0.8rem; border-right: 1px solid #e2e8f0; }
 .zoom-controls button:last-child { border-right: 0; }
 .citation-badge { margin-left: auto; font-size: 0.78rem; font-weight: 700; color: #92400e; background: #fef3c7; padding: 4px 10px; border-radius: 999px; border: 1px solid #fde68a; }
-.page-stage { position: relative; max-width: 100%; overflow: auto; border: 1px solid #d4dbea; border-radius: 10px; background: #525659; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.page-stage { position: relative; width: 100%; max-width: 100%; max-height: calc(100vh - 175px); overflow: auto; border: 1px solid #d4dbea; border-radius: 10px; background: #525659; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
 .page-stage canvas { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 .region-highlight { position: absolute; border: 2.5px solid #d97706; background: rgba(245, 158, 11, 0.28); pointer-events: none; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6); animation: highlightPulse 2s ease-in-out infinite alternate; }
 .region-tag { position: absolute; top: -18px; left: 0; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; background: #d97706; color: white; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.05em; pointer-events: none; white-space: nowrap; }
 @keyframes highlightPulse { 0% { background: rgba(245, 158, 11, 0.22); border-color: #d97706; } 100% { background: rgba(245, 158, 11, 0.42); border-color: #b45309; } }
 
-.answers-panel { padding: 28px 20px; border-left: 1px solid #d4dbea; background: #fff; display: flex; flex-direction: column; gap: 18px; }
+.answers-panel { min-height: 0; padding: 28px 20px; border-left: 1px solid #d4dbea; background: #fff; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
 .question-form { display: grid; gap: 8px; }
 .question-form label { font-size: .88rem; font-weight: 700; }
 .question-form textarea { resize: vertical; padding: 10px; border: 1px solid #b8c3d7; border-radius: 8px; }
@@ -49,5 +53,5 @@ h2 { font-size: 1.2rem; }
 .status { padding: 5px 9px; border-radius: 999px; background: #e6eaf3; color: #35415a; font-size: .8rem; text-transform: capitalize; }
 .status.ready { background: #d9f6ed; color: #11604b; }.status.failed { background: #fde3e4; color: #9c2025; }
 .error { color: #ffb4b8; font-size: .9rem; }.empty-state { display: grid; min-height: 60vh; place-items: center; border: 1px dashed #b8c3d7; border-radius: 10px; color: #61708b; text-align: center; padding: 24px; }
-@media (max-width: 1020px) { .workspace { grid-template-columns: minmax(245px, 320px) 1fr; }.answers-panel { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #d4dbea; } }
+@media (max-width: 1020px) { .workspace { height: auto; min-height: 100vh; grid-template-columns: minmax(245px, 320px) minmax(0, 1fr); overflow: visible; }.answers-panel { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #d4dbea; overflow: visible; }.viewer { overflow: visible; }.page-stage { max-height: 70vh; } }
 @media (max-width: 760px) { .workspace { grid-template-columns: 1fr; }.sidebar { min-height: auto; }.viewer { padding: 20px; } }

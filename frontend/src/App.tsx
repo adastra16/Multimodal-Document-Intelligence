@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
-import { askQuestion, listDocuments, uploadDocuments } from "./api";
+import { askQuestion, deleteDocument, listDocuments, uploadDocuments } from "./api";
 import PdfViewer from "./PdfViewer";
 import type { AnswerResponse, Citation, DocumentSummary } from "./types";
 
@@ -9,6 +9,7 @@ function App() {
   const [selectedDocument, setSelectedDocument] = useState<DocumentSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AnswerResponse | null>(null);
@@ -62,6 +63,24 @@ function App() {
     }
   }
 
+  async function handleDelete(document: DocumentSummary) {
+    setDeletingDocumentId(document.document_id);
+    setError(null);
+    try {
+      await deleteDocument(document.document_id);
+      if (selectedDocument?.document_id === document.document_id) {
+        setAnswer(null);
+        setActiveCitation(null);
+        setPageNumber(1);
+      }
+      await refreshDocuments();
+    } catch (caughtError) {
+      setError(messageFor(caughtError));
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  }
+
   function openCitation(citation: Citation) {
     setActiveCitation(citation);
     setPageNumber(citation.regions[0]?.page_number ?? citation.page_numbers[0] ?? 1);
@@ -97,20 +116,31 @@ function App() {
           {isLoading && <p>Loading documents...</p>}
           {!isLoading && documents.length === 0 && <p>No PDFs uploaded yet.</p>}
           {documents.map((document) => (
-            <button
-              className={document.document_id === selectedDocument?.document_id ? "document active" : "document"}
-              key={document.document_id}
-              onClick={() => {
-                setSelectedDocument(document);
-                setAnswer(null);
-                setActiveCitation(null);
-                setPageNumber(1);
-              }}
-              type="button"
-            >
-              <span>{document.filename}</span>
-              <small>{document.status} - {document.page_count ?? "?"} pages</small>
-            </button>
+            <div className="document-row" key={document.document_id}>
+              <button
+                className={document.document_id === selectedDocument?.document_id ? "document active" : "document"}
+                onClick={() => {
+                  setSelectedDocument(document);
+                  setAnswer(null);
+                  setActiveCitation(null);
+                  setPageNumber(1);
+                }}
+                type="button"
+              >
+                <span>{document.filename}</span>
+                <small>{document.status} - {document.page_count ?? "?"} pages</small>
+              </button>
+              <button
+                aria-label={`Delete ${document.filename}`}
+                className="delete-document"
+                disabled={deletingDocumentId === document.document_id}
+                onClick={() => void handleDelete(document)}
+                title="Delete document"
+                type="button"
+              >
+                {deletingDocumentId === document.document_id ? "…" : "⌫"}
+              </button>
+            </div>
           ))}
         </div>
       </aside>

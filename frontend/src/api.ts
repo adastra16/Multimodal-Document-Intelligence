@@ -10,6 +10,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     } | null;
     throw new Error(body?.error?.message ?? `Request failed (${response.status})`);
   }
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return response.json() as Promise<T>;
 }
 
@@ -21,6 +24,10 @@ export function uploadDocuments(files: File[]): Promise<DocumentUploadResponse> 
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
   return request<DocumentUploadResponse>("/documents", { method: "POST", body: formData });
+}
+
+export function deleteDocument(documentId: string): Promise<void> {
+  return request<void>(`/documents/${documentId}`, { method: "DELETE" });
 }
 
 export function sourceFileUrl(documentId: string): string {

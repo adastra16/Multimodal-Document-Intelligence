@@ -175,7 +175,7 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
         )}
       </div>
 
-      <div className="page-stage" style={{ width: pageSize.width || undefined }}>
+      <div className="page-stage">
         <canvas ref={canvasRef} />
         {regions.map((region) => region.bbox && pageSize.unscaledWidth > 0 && (
           <div
