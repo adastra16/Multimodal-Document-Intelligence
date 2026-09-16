@@ -2,6 +2,8 @@
 
 A production-grade, multimodal document intelligence system capable of parsing visually rich PDFs (multi-column, tables, figures, scanned/OCR), performing cross-page hybrid retrieval, generating strictly grounded answers, and providing interactive bounding-box citations in a web UI.
 
+Demo video- https://drive.google.com/file/d/1-ag5bg2bL1kHGk2loO8GWs_xLfJNM0Ql/view?usp=sharing
+
 ## Features
 
 - **Multimodal PDF Ingestion**: Extracts text, tables, and figures along with their precise coordinates `(x0, y0, x1, y1)` and page numbers. Includes fallback OCR for scanned documents.
