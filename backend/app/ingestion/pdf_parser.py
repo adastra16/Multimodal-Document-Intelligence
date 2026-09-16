@@ -125,15 +125,48 @@ class PdfDocumentParser:
         return blocks
 
     def _ocr_page(self, document_id: str, page_number: int, page: Any) -> list[DocumentRegion]:
-        pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        dpi = getattr(self._ocr_engine, "dpi", 220)
+        zoom = float(dpi) / 72.0
+        pixmap = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
             temp_path = Path(temp_file.name)
         try:
             pixmap.save(temp_path)
-            return self._ocr_engine.extract(temp_path, page_number, document_id)
+            regions = self._ocr_engine.extract(temp_path, page_number, document_id)
+            if self._ocr_engine.image_space_bboxes:
+                return self._scale_ocr_regions(regions, page.rect.width, page.rect.height, pixmap)
+            return regions
         finally:
             if temp_path.exists():
                 temp_path.unlink()
+
+    @staticmethod
+    def _scale_ocr_regions(
+        regions: list[DocumentRegion],
+        page_width: float,
+        page_height: float,
+        pixmap: Any,
+    ) -> list[DocumentRegion]:
+        scale_x = page_width / float(pixmap.width)
+        scale_y = page_height / float(pixmap.height)
+        scaled: list[DocumentRegion] = []
+        for region in regions:
+            if region.bbox is None:
+                scaled.append(region)
+                continue
+            scaled.append(
+                region.model_copy(
+                    update={
+                        "bbox": BoundingBox(
+                            x0=region.bbox.x0 * scale_x,
+                            y0=region.bbox.y0 * scale_y,
+                            x1=region.bbox.x1 * scale_x,
+                            y1=region.bbox.y1 * scale_y,
+                        )
+                    }
+                )
+            )
+        return scaled
 
     @staticmethod
     def _map_block_type(raw_type: int | None) -> BlockType:

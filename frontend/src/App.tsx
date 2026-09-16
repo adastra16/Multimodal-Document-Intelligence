@@ -191,16 +191,22 @@ function App() {
               {answer.status === "answered" ? "Grounded answer" : "Insufficient evidence"}
             </p>
             <p className="answer-text">{answer.answer}</p>
-            {answer.claims.map((claim, index) => (
-              <article className="claim" key={`${claim.text}-${index}`}>
-                <p>{claim.text}</p>
-                {claim.citations.map((citation) => (
-                  <button className="citation" key={citation.chunk_id} onClick={() => openCitation(citation)} type="button">
-                    {citation.filename ?? citation.document_id}, page {citation.page_numbers.join(", ")}
-                  </button>
-                ))}
-              </article>
-            ))}
+            {answer.claims.length > 0 && (
+              <div className="citation-list">
+                {answer.claims.map((claim, index) =>
+                  claim.citations.map((citation) => (
+                    <button
+                      className="citation"
+                      key={`${citation.chunk_id}-${index}`}
+                      onClick={() => openCitation(citation)}
+                      type="button"
+                    >
+                      {citation.filename ?? citation.document_id}, page {citation.page_numbers.join(", ")}
+                    </button>
+                  )),
+                )}
+              </div>
+            )}
           </section>
         )}
       </aside>

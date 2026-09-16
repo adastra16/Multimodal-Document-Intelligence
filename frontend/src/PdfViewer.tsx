@@ -7,6 +7,10 @@ import type { CitationRegion } from "./types";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.2;
+
 interface PdfViewerProps {
   documentId: string;
   highlightedRegions: CitationRegion[];
@@ -16,9 +20,11 @@ interface PdfViewerProps {
 
 function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }: PdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
-  const [scale, setScale] = useState(1.35);
+  const [zoomFactor, setZoomFactor] = useState(1);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [pageSize, setPageSize] = useState({
     width: 0,
     height: 0,
@@ -27,10 +33,28 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Filter regions that apply to current page
   const regions = highlightedRegions.filter((region) => region.page_number === pageNumber);
 
-  // Load PDF document when documentId changes
+  useEffect(() => {
+    setZoomFactor(1);
+  }, [documentId]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const width = Math.floor(entries[0]?.contentRect.width ?? 0);
+      if (width > 0) {
+        setContainerWidth(width);
+      }
+    });
+    observer.observe(stage);
+    setContainerWidth(Math.floor(stage.clientWidth));
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const loadingTask = getDocument({ url: sourceFileUrl(documentId) });
@@ -59,9 +83,8 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
     };
   }, [documentId]);
 
-  // Render current page onto canvas whenever pdfDoc, pageNumber, or scale changes
   useEffect(() => {
-    if (!pdfDoc) return;
+    if (!pdfDoc || containerWidth <= 0) return;
 
     let cancelled = false;
     const safePage = Math.min(Math.max(pageNumber, 1), pdfDoc.numPages);
@@ -70,7 +93,7 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
       return;
     }
 
-    let activeRenderTask: any = null;
+    let activeRenderTask: { cancel: () => void; promise: Promise<unknown> } | null = null;
 
     async function renderPage() {
       try {
@@ -78,8 +101,10 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
         const page = await pdfDoc!.getPage(safePage);
         if (cancelled) return;
 
-        const viewport = page.getViewport({ scale });
         const unscaledViewport = page.getViewport({ scale: 1.0 });
+        const fitScale = containerWidth / unscaledViewport.width;
+        const scale = fitScale * zoomFactor;
+        const viewport = page.getViewport({ scale });
         const canvas = canvasRef.current;
         if (!canvas || cancelled) return;
 
@@ -98,8 +123,11 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
 
         activeRenderTask = page.render({ canvas, canvasContext: context, viewport });
         await activeRenderTask.promise;
-      } catch (renderError: any) {
-        if (!cancelled && renderError?.name !== "RenderingCancelledException") {
+      } catch (renderError: unknown) {
+        const name = typeof renderError === "object" && renderError && "name" in renderError
+          ? String((renderError as { name: string }).name)
+          : "";
+        if (!cancelled && name !== "RenderingCancelledException") {
           setError("Unable to render this PDF page.");
         }
       }
@@ -117,7 +145,7 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
         }
       }
     };
-  }, [pdfDoc, pageNumber, scale, onPageChange]);
+  }, [pdfDoc, pageNumber, zoomFactor, containerWidth, onPageChange]);
 
   if (error) return <div className="empty-state">{error}</div>;
 
@@ -144,23 +172,19 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
 
         <div className="zoom-controls">
           <button
-            disabled={scale <= 0.8}
-            onClick={() => setScale((current) => Math.max(0.75, Math.round((current - 0.2) * 100) / 100))}
+            disabled={zoomFactor <= MIN_ZOOM}
+            onClick={() => setZoomFactor((current) => Math.max(MIN_ZOOM, roundZoom(current - ZOOM_STEP)))}
             title="Zoom Out"
             type="button"
           >
             -
           </button>
-          <button
-            onClick={() => setScale(1.35)}
-            title="Reset Zoom"
-            type="button"
-          >
-            {Math.round(scale * 100 / 1.35)}%
+          <button onClick={() => setZoomFactor(1)} title="Fit width" type="button">
+            {Math.round(zoomFactor * 100)}%
           </button>
           <button
-            disabled={scale >= 2.5}
-            onClick={() => setScale((current) => Math.min(2.5, Math.round((current + 0.2) * 100) / 100))}
+            disabled={zoomFactor >= MAX_ZOOM}
+            onClick={() => setZoomFactor((current) => Math.min(MAX_ZOOM, roundZoom(current + ZOOM_STEP)))}
             title="Zoom In"
             type="button"
           >
@@ -175,26 +199,37 @@ function PdfViewer({ documentId, highlightedRegions, pageNumber, onPageChange }:
         )}
       </div>
 
-      <div className="page-stage">
-        <canvas ref={canvasRef} />
-        {regions.map((region) => region.bbox && pageSize.unscaledWidth > 0 && (
-          <div
-            aria-label={`Highlighted ${region.block_type} region`}
-            className="region-highlight"
-            key={region.block_id}
-            style={{
-              left: `${(region.bbox.x0 / pageSize.unscaledWidth) * 100}%`,
-              top: `${(region.bbox.y0 / pageSize.unscaledHeight) * 100}%`,
-              width: `${((region.bbox.x1 - region.bbox.x0) / pageSize.unscaledWidth) * 100}%`,
-              height: `${((region.bbox.y1 - region.bbox.y0) / pageSize.unscaledHeight) * 100}%`,
-            }}
-          >
-            <span className="region-tag">{region.block_type}</span>
-          </div>
-        ))}
+      <div className={`page-stage${zoomFactor > 1 ? " is-zoomed" : ""}`} ref={stageRef}>
+        <div
+          className="page-frame"
+          style={
+            pageSize.width > 0
+              ? { width: pageSize.width, height: pageSize.height }
+              : undefined
+          }
+        >
+          <canvas ref={canvasRef} />
+          {regions.map((region) => region.bbox && pageSize.unscaledWidth > 0 && (
+            <div
+              aria-label="Cited region"
+              className="region-highlight"
+              key={region.block_id}
+              style={{
+                left: `${(region.bbox.x0 / pageSize.unscaledWidth) * 100}%`,
+                top: `${(region.bbox.y0 / pageSize.unscaledHeight) * 100}%`,
+                width: `${((region.bbox.x1 - region.bbox.x0) / pageSize.unscaledWidth) * 100}%`,
+                height: `${((region.bbox.y1 - region.bbox.y0) / pageSize.unscaledHeight) * 100}%`,
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+function roundZoom(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 export default PdfViewer;

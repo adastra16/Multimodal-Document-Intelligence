@@ -22,13 +22,18 @@ Full tables, prior runs, and failure notes are in [evaluation/RESULTS.md](evalua
 
 ## Prerequisites
 
-**Tesseract OCR** must be installed and on `PATH` to parse scanned or image-only PDF pages. Native-text PDFs work without it. The Compose file does not install Tesseract, so scanned-PDF demos need Tesseract on the host (local run) or `tesseract-ocr` added to the backend image.
+**Tesseract OCR** is required for scanned or image-only PDF pages. Native-text PDFs work without it.
 
-- Windows: `winget install --id UB-Mannheim.TesseractOCR` (or the installer from the [UB Mannheim builds](https://github.com/UB-Mannheim/tesseract/wiki)), then confirm with `tesseract --version`.
-- macOS: `brew install tesseract`
-- Debian/Ubuntu: `sudo apt-get install -y tesseract-ocr`
+- The backend Docker image installs `tesseract-ocr` (English). Rebuild Compose after pulling this change.
+- Local development still needs Tesseract on the host and on `PATH` (or set `OCR_COMMAND` to the executable).
 
-The backend calls Tesseract via `OCR_COMMAND` (default `tesseract`) in `.env`.
+Windows: `winget install --id UB-Mannheim.TesseractOCR -e` (or the [UB Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki)), then confirm with `tesseract --version`. If PATH is not updated yet, set `OCR_COMMAND=C:\Program Files\Tesseract-OCR\tesseract.exe` in `.env`.
+
+macOS: `brew install tesseract`
+
+Debian/Ubuntu: `sudo apt-get install -y tesseract-ocr`
+
+The parser uses Tesseract only when a page has no native text blocks. Region boxes from OCR are scaled back into PDF coordinates for citations.
 
 ## Quickstart (Docker)
 

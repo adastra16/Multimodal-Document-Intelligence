@@ -17,6 +17,7 @@ from app.core.errors import (
     IndexingError,
     UnsupportedMediaTypeError,
 )
+from app.ingestion.ocr import TesseractOcrEngine
 from app.ingestion.pdf_parser import PdfDocumentParser
 from app.models.document import DocumentOrigin, DocumentRecord, DocumentStatus
 from app.persistence.documents import DocumentRepository
@@ -34,7 +35,13 @@ class DocumentService:
             self._vector_index,
             HashedEmbeddingModel(self._settings.embedding_dimensions),
         )
-        self._parser = PdfDocumentParser()
+        self._parser = PdfDocumentParser(
+            ocr_engine=TesseractOcrEngine(
+                command=self._settings.ocr_command,
+                language=self._settings.ocr_language,
+                dpi=self._settings.ocr_dpi,
+            )
+        )
 
     def list_documents(self, origin: DocumentOrigin | None = None) -> list[DocumentRecord]:
         return self._repository.list_documents(origin)

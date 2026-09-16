@@ -5,8 +5,14 @@ from pathlib import Path
 
 import fitz
 
+from app.ingestion.ocr import OcrEngine
 from app.ingestion.pdf_parser import PdfDocumentParser
-from app.models.document import DocumentRecord, DocumentStatus
+from app.models.document import DocumentRecord, DocumentRegion, DocumentStatus
+
+
+class _ExplodingOcrEngine(OcrEngine):
+    def extract(self, image_path: Path, page_number: int, document_id: str) -> list[DocumentRegion]:
+        raise AssertionError("native-text pages must not invoke OCR")
 
 
 def _create_pdf(path: Path) -> None:
@@ -23,7 +29,7 @@ def test_pdf_parser_extracts_pages_blocks_and_chunks(tmp_path: Path) -> None:
     pdf_path = tmp_path / "parser.pdf"
     _create_pdf(pdf_path)
 
-    parser = PdfDocumentParser()
+    parser = PdfDocumentParser(ocr_engine=_ExplodingOcrEngine())
     parsed = parser.parse(
         DocumentRecord(
             document_id="doc-1",
@@ -43,5 +49,7 @@ def test_pdf_parser_extracts_pages_blocks_and_chunks(tmp_path: Path) -> None:
     assert len(parsed.pages) == 2
     assert parsed.pages[0].page_number == 1
     assert parsed.pages[0].blocks[0].block_type.value == "text"
+    assert parsed.pages[0].metadata["is_scanned_page"] is False
+    assert parsed.pages[0].regions[0].source == "native"
     assert any(chunk.chunk_type.value == "page" for chunk in parsed.chunks)
     assert any(chunk.chunk_type.value == "cross_page" for chunk in parsed.chunks)
