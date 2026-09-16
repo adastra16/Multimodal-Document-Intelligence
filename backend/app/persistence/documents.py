@@ -6,9 +6,14 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.core.config import Settings
 from app.core.errors import ConflictError, NotFoundError
+from app.core.logging import get_logger
 from app.models.document import DocumentOrigin, DocumentRecord, DocumentStatus
+
+logger = get_logger(__name__)
 
 
 class DocumentRepository:
@@ -157,8 +162,18 @@ class DocumentRepository:
             ).fetchone()
         if row is None:
             raise NotFoundError(f"Document {document_id} not found")
+        record = self._deserialize_row(row)
         artifact = self._load_artifact(document_id)
-        return artifact or self._deserialize_row(row)
+        if artifact is None:
+            return record
+        return artifact.model_copy(
+            update={
+                "origin": record.origin,
+                "status": record.status,
+                "page_count": record.page_count,
+                "updated_at": record.updated_at,
+            }
+        )
 
     def update_status(
         self,
@@ -202,4 +217,8 @@ class DocumentRepository:
         artifact_path = self._artifact_path(document_id)
         if not artifact_path.exists():
             return None
-        return DocumentRecord.model_validate_json(artifact_path.read_text(encoding="utf-8"))
+        try:
+            return DocumentRecord.model_validate_json(artifact_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            logger.warning("invalid_document_artifact", document_id=document_id)
+            return None

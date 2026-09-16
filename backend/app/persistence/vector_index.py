@@ -12,6 +12,15 @@ from app.core.config import Settings
 from app.models.document import ChunkType, DocumentChunk
 
 
+def _parse_chunk_type(value: str) -> ChunkType:
+    if value == "block":
+        return ChunkType.WINDOW
+    try:
+        return ChunkType(value)
+    except ValueError:
+        return ChunkType.WINDOW
+
+
 class VectorIndexRepository:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -64,6 +73,7 @@ class VectorIndexRepository:
                 "CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_chunk_type "
                 "ON chunk_embeddings(chunk_type)"
             )
+        self.delete_legacy_block_chunks()
 
     @staticmethod
     def _serialize_datetime(value: datetime) -> str:
@@ -186,7 +196,7 @@ class VectorIndexRepository:
         return {
             "chunk_id": row["chunk_id"],
             "document_id": row["document_id"],
-            "chunk_type": ChunkType(row["chunk_type"]),
+            "chunk_type": _parse_chunk_type(row["chunk_type"]),
             "text": row["text"],
             "page_numbers": json.loads(row["page_numbers"]),
             "source_block_ids": json.loads(row["source_block_ids"]),

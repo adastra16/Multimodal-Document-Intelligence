@@ -12,10 +12,23 @@ A production-grade, multimodal document intelligence system capable of parsing v
 
 ## Evaluation Results
 
-Based on our benchmark harness, the system achieves:
-- **Cross-Page Recall**: 100%
-- **Hallucination Rate on Unanswerable Queries**: ~0.0% (down from 25% due to salient term reranking)
-- **Status Accuracy**: 100.0%
+Final corrected-gold run (`eval_run_20260916_120011.json`):
+
+| Hit@1 | Hit@3 | Hit@5 | MRR | Mean page recall | Cross-page recall | Status accuracy | Faithfulness | Hallucination rate |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.36 | 0.68 | 0.84 | 0.5207 | 0.90 | 1.00 | 0.92 | 1.00 | 0.08 |
+
+Full tables, prior runs, and failure notes are in [evaluation/RESULTS.md](evaluation/RESULTS.md). Re-run with `python evaluation/run_eval.py`.
+
+## Prerequisites
+
+**Tesseract OCR** must be installed and on `PATH` to parse scanned or image-only PDF pages. Native-text PDFs work without it. The Compose file does not install Tesseract, so scanned-PDF demos need Tesseract on the host (local run) or `tesseract-ocr` added to the backend image.
+
+- Windows: `winget install --id UB-Mannheim.TesseractOCR` (or the installer from the [UB Mannheim builds](https://github.com/UB-Mannheim/tesseract/wiki)), then confirm with `tesseract --version`.
+- macOS: `brew install tesseract`
+- Debian/Ubuntu: `sudo apt-get install -y tesseract-ocr`
+
+The backend calls Tesseract via `OCR_COMMAND` (default `tesseract`) in `.env`.
 
 ## Quickstart (Docker)
 

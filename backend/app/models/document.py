@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class BlockType(str, Enum):
@@ -101,6 +101,14 @@ class DocumentChunk(BaseModel):
     source_block_ids: list[str] = Field(default_factory=list)
     bbox: BoundingBox | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("chunk_type", mode="before")
+    @classmethod
+    def _coerce_legacy_chunk_type(cls, value: object) -> object:
+        """Map the reverted block-retrieval experiment onto window chunks."""
+        if value == "block":
+            return ChunkType.WINDOW
+        return value
 
 
 class DocumentRecord(BaseModel):

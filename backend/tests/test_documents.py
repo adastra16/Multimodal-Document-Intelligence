@@ -1,5 +1,6 @@
 """Document upload and lookup integration coverage."""
 
+import json
 from pathlib import Path
 
 import fitz
@@ -107,3 +108,27 @@ def test_list_excludes_evaluation_documents_and_delete_removes_upload_data(tmp_p
         assert client.get("/documents").json()["documents"] == []
         assert client.get(f"/documents/{document_id}").status_code == 404
         assert client.delete(f"/documents/{evaluation.document_id}").status_code == 403
+
+
+def test_legacy_block_chunks_can_be_loaded_and_deleted(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "sample.pdf"
+    _create_pdf(pdf_path)
+
+    with _build_client(tmp_path) as client:
+        upload = client.post(
+            "/documents",
+            files=[("files", ("sample.pdf", pdf_path.read_bytes(), "application/pdf"))],
+        )
+        document_id = upload.json()["documents"][0]["document_id"]
+        artifact_path = tmp_path / "data" / "artifacts" / f"{document_id}.json"
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+        payload["chunks"][0]["chunk_type"] = "block"
+        artifact_path.write_text(json.dumps(payload), encoding="utf-8")
+
+        detail = client.get(f"/documents/{document_id}")
+        assert detail.status_code == 200
+        assert detail.json()["chunks"][0]["chunk_type"] == "window"
+
+        delete_response = client.delete(f"/documents/{document_id}")
+        assert delete_response.status_code == 204
+        assert client.get("/documents").json()["documents"] == []
